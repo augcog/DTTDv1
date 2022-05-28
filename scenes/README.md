@@ -22,3 +22,10 @@ Each object folder contains a `marker_positions.csv`:
 Each scene also contains a file:
 `camera_poses.csv`:
 - this contains the per-frame pose of the camera. The per-frame pose of each object in the camera frame can be easily solved for using this.
+
+Each scene also contains a file:
+`scene_meta.yaml`:
+- this contains scene level metadata
+-- camera intrinsics
+-- which objects are in this scene
+-- random stuff like time of day?

@@ -12,3 +12,9 @@ Current Problems:
 - Need to write the renderer to collect GT semantic labeling (should be pretty straight forward)
 - Need to have 3D models for our objects
 -- and Marker positions (for each scene)
+
+Final dataset output:
+- `objects` folder
+- `scenes` folder certain data:
+-- `scenes/<scene number>/data/` folder
+-- `scenes/<scene number>/scene_meta.yaml` metadata
