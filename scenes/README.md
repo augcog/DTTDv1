@@ -17,7 +17,7 @@ Each scene contains 2 folders:
 Each object folder contains a `marker_positions.csv`:
 - this defines the markers positions in the object coordinate system. We use these to recover object pose
 -- this is defined per scene since the marker positions may change between scenes, since we have to remove them to record the camera data
--- the object coordinate system is defined in `objects/\<object name\>/\<object name\>.obj`
+-- the object coordinate system is defined in `objects/<object name>/<object name>.obj`
 
 Each scene also contains a file:
 `camera_poses.csv`:
