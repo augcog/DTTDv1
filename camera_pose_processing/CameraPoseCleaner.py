@@ -1,12 +1,17 @@
 import os
 import csv
+import numpy as np
+import pandas as pd
 
-class CameraPoseProcess():
+"""
+Cleans the exported tracking data output of the OptiTrack
+"""
+class CameraPoseCleaner():
     def __init__(self):
         pass
 
     @staticmethod
-    def process_camera_poses(pose_path):
+    def clean_camera_pose_file(pose_path, write_cleaned_to_file=False):
         cleaned_pose_path = pose_path[:pose_path.rfind(".csv")] + "_cleaned.csv"
 
         header_rows = []
@@ -27,18 +32,19 @@ class CameraPoseProcess():
         headers = ['_'.join([x[i] for x in header_rows if len(x[i]) > 0]) for i in range(len(header_rows[0]))]
         headers = [h.replace(" ", "_").replace("(", "").replace(")", "") for h in headers]
 
-        first_noncamera_column = min([i for (i, h) in enumerate(headers) if ("Marker" in h and "camera" not in h)])
+        first_marker_column = min([i for (i, h) in enumerate(headers) if "Marker" in h])
 
-        headers = headers[:first_noncamera_column]
-        rows = [row[:first_noncamera_column] for row in rows]
+        headers = headers[:first_marker_column]
+        rows = [row[:first_marker_column] for row in rows]
 
-        #FOR DUPLICATING FRAME ROW
-        headers = [headers[0]] + headers
-        rows = [[row[0]] + row for row in rows]
+        if write_cleaned_to_file:
+            with open(cleaned_pose_path, 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+                writer.writerow(headers)
+                for row in rows:
+                    writer.writerow(row)
 
-        with open(cleaned_pose_path, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(headers)
-            for row in rows:
-                writer.writerow(row)
+        df = pd.DataFrame(rows, columns=headers)
+
+        return df
             
