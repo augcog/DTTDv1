@@ -30,9 +30,6 @@ class CameraOptiExtrinsicCalculator():
 
     @staticmethod
     def calculate_extrinsic(frames_dir, opti_poses_df, pose_synchronization):
-
-        #calculate aruco_poses and populate opti_poses
-
         #opti_poses: virtual camera -> opti
         opti_poses = []
 
