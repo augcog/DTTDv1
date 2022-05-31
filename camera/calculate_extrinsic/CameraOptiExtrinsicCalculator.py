@@ -70,7 +70,7 @@ class CameraOptiExtrinsicCalculator():
         camera_sensor_to_opti_transforms = []
 
         for frame_id, opti_pose_row_number in pose_synchronization.items():
-            frame = cv2.imread(os.path.join(frames_dir, frame + ".jpg"))
+            frame = cv2.imread(os.path.join(frames_dir, frame_id + ".jpg"))
 
             aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_5X5_250)
             parameters = cv2.aruco.DetectorParameters_create()
