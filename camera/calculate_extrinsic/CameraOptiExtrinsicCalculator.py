@@ -70,7 +70,7 @@ class CameraOptiExtrinsicCalculator():
         camera_sensor_to_opti_transforms = []
 
         for frame_id, opti_pose_row_number in pose_synchronization.items():
-            frame = cv2.imread(os.path.join(frames_dir, frame_id + ".jpg"))
+            frame = cv2.imread(os.path.join(frames_dir, str(frame_id).zfill(5) + "_color.jpg"))
 
             aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_5X5_250)
             parameters = cv2.aruco.DetectorParameters_create()
@@ -89,7 +89,7 @@ class CameraOptiExtrinsicCalculator():
                 camera_sensor_to_opti_transforms.append(camera_sensor_to_opti_transform)
 
                 #get optitrack pose for virtual camera
-                opti_pose_row = opti_poses_df[opti_pose_row_number]
+                opti_pose_row = opti_poses_df.loc[opti_poses_df["Frame"] == opti_pose_row_number]
 
                 opti_quat = np.array(opti_pose_row["camera_Rotation_X","camera_Rotation_Y","camera_Rotation_Z","camera_Rotation_W"])
                 opti_translation = np.array(opti_pose_row["camera_Position_X","camera_Position_Y","camera_Position_Z"])

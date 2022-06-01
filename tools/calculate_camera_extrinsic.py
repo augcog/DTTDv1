@@ -49,8 +49,10 @@ def main():
     extrinsic = cam_opti_extr_calc.calculate_extrinsic(args.frames, cleaned_opti_poses, pose_synchronization)
 
     print("computed extrinsic:", extrinsic)
-
-    np.savetxt(extrinsic, args.output)
+    
+    if args.output:
+        print("saving extrinsic to file {0}".format(args.output))
+        np.savetxt(extrinsic, args.output)
 
 if __name__ == "__main__":
     main()
