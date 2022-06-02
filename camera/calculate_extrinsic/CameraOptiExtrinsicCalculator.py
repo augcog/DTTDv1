@@ -1,48 +1,18 @@
 import numpy as np
 import cv2
-import os
 from scipy.spatial.transform import Rotation as R
 
+import os, sys 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(dir_path, ".."))
+
 from camera_pose_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
+from utils.affine_utils import invert_affine, affine_matrix_from_rotvec_trans, average_quaternion
 
 class CameraOptiExtrinsicCalculator():
     def __init__(self, camera_intrinsic_matrix, camera_distortion_coefficients):
         self.camera_intrinsic_matrix = camera_intrinsic_matrix
         self.camera_distortion_coefficients = camera_distortion_coefficients
-
-    @staticmethod
-    def invert_affine(affine):
-        assert(affine.shape == (4, 4))
-
-        invert_affine = np.zeros((4, 4))
-        invert_affine[:3,:3] = affine[:3,:3].T
-        invert_affine[:3,3] = -affine[:3,3]
-        invert_affine[3,3] = 1.
-
-        return invert_affine
-
-    #quats of shape (4xN)
-    #return average quaternion
-    @staticmethod
-    def average_quaternion(quats):
-        assert(quats.shape[0] == 4)
-
-        q = quats @ quats.T
-
-        w, v = np.linalg.eig(q)
-
-        max_eigenvalue_idx = np.argmax(w)
-        return v[:,max_eigenvalue_idx]
-
-    @staticmethod
-    def affine_matrix_from_rotvec_trans(rot_vec, trans):
-        rot = R.from_rotvec(rot_vec)
-        rmatrix = rot.as_matrix()
-        trans = np.expand_dims(trans, -1)
-        aff = np.hstack((rmatrix, trans))
-        lrow = np.array([0,0,0,1])
-        aff = np.vstack((aff, lrow))
-        return aff
 
     #assumed that the optitrack origin is 4cm above the aruco marker taped to the ground
     @staticmethod
@@ -54,7 +24,7 @@ class CameraOptiExtrinsicCalculator():
 
     @staticmethod
     def calculate_camera_to_opti_transform(rot_vec, trans):
-        aff = CameraOptiExtrinsicCalculator.affine_matrix_from_rotvec_trans(rot_vec, trans) #aruco -> camera
+        aff = affine_matrix_from_rotvec_trans(rot_vec, trans) #aruco -> camera
         aff = CameraOptiExtrinsicCalculator.add_optitrack_aruco_offset(aff) #aruco -> camera
         aruco_to_opti = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]) #aruco -> opti (rot (3x3))
 
@@ -62,7 +32,7 @@ class CameraOptiExtrinsicCalculator():
         opti_to_aruco[:3,:3] = np.linalg.inv(aruco_to_opti) #opti -> aruco (affine (4x4))
 
         affine_transform_opti = np.matmul(aff, opti_to_aruco) #1. opti -> aruco 2. aruco -> camera = opti -> camera
-        return CameraOptiExtrinsicCalculator.invert_affine(affine_transform_opti) #camera -> opti
+        return invert_affine(affine_transform_opti) #camera -> opti
 
     def calculate_extrinsic(self, frames_dir, opti_poses_df, pose_synchronization):
 
@@ -109,7 +79,7 @@ class CameraOptiExtrinsicCalculator():
         extrinsics = []
 
         for camera_to_opti, virtual_to_opti in zip(camera_sensor_to_opti_transforms, virtual_camera_to_opti_transforms):
-            extrinsics.append([CameraOptiExtrinsicCalculator.invert_affine(camera_to_opti) @ virtual_to_opti])
+            extrinsics.append([invert_affine(camera_to_opti) @ virtual_to_opti])
 
         extrinsics = np.array(extrinsics)
 
@@ -130,7 +100,7 @@ class CameraOptiExtrinsicCalculator():
         extrinsic_rots = extrinsics[:,:3,:3]
         extrinsic_quats = R.from_matrix(extrinsic_rots).as_quat()
 
-        quat = CameraOptiExtrinsicCalculator.average_quaternion(extrinsic_quats)
+        quat = average_quaternion(extrinsic_quats)
 
         extrinsic = np.eye(4)
         extrinsic[:3,:3] = R.from_quat(quat).as_matrix()

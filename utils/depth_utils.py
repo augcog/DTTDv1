@@ -1,10 +1,14 @@
-from calendar import different_locale
 import normalSpeed
 from PIL import Image
 import os
 import numpy as np
 import cv2
-import manual_pose_annotation.depth_map_utils as depth_map_utils
+
+import os, sys 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(dir_path, ".."))
+
+import utils.depth_map_utils as depth_map_utils
 
 def fill_missing(
             dpt, cam_scale, scale_2_80m, fill_type='multiscale',

@@ -12,9 +12,15 @@ import numpy as np
 import cv2
 import open3d as o3d
 import matplotlib.pyplot as plt
-from manual_pose_annotation.depth_utils import fill_missing
 from functools import partial
 from scipy.spatial.transform import Rotation as R
+
+import os, sys 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(dir_path, ".."))
+
+from utils.depth_utils import fill_missing
+from utils.pointcloud_utils import pointcloud_from_rgb_depth
 
 class ManualPoseAnnotator:
 
@@ -23,47 +29,12 @@ class ManualPoseAnnotator:
     object coordinates are in meters
     """
     def __init__(self, objects, camera_intrinsic_matrix, camera_distortion_coefficients):
-        self.objects = objects
+        self._objects = {}
+        for obj_id, obj_data in objects.items():
+            self._objects[obj_id] = {"name" : obj_data["name"]}
+            self._objects[obj_id]["mesh"] = o3d.geometry.TriangleMesh(obj_data["mesh"]) #copy the geometry
         self.camera_intrinsic_matrix = camera_intrinsic_matrix
         self.camera_distortion_coefficients = camera_distortion_coefficients
-
-    @staticmethod
-    def pointcloud_from_rgb_depth(rgb, depth, depth_scale, intrinsic, distortion, prune_zero=True):
-
-        points = np.array([[(k, i) for k in range(depth.shape[1])] for i in range(depth.shape[0])]).reshape((-1, 2)).astype(np.float32)
-        Z = depth.flatten() * depth_scale
-
-        f_x = intrinsic[0, 0]
-        f_y = intrinsic[1, 1]
-        c_x = intrinsic[0, 2]
-        c_y = intrinsic[1, 2]
-
-        rgb = rgb.reshape((-1, 3))
-
-        if prune_zero:
-            points = points[Z > 0]
-            rgb = rgb[Z > 0]
-            Z = Z[Z > 0]
-
-        # Step 1. Undistort.
-        points_undistorted = cv2.undistortPoints(np.expand_dims(points, 1), intrinsic, distortion, P=intrinsic)
-        points_undistorted = np.squeeze(points_undistorted, axis=1)
-
-        # Step 2. Reproject.
-        pts_xyz = []
-        for idx in range(points_undistorted.shape[0]):
-            z = Z[idx]
-            x = (points_undistorted[idx, 0] - c_x) / f_x * z
-            y = (points_undistorted[idx, 1] - c_y) / f_y * z
-            pts_xyz.append([x, y, z])
-
-        pts_xyz = np.array(pts_xyz)
-        pcld = o3d.geometry.PointCloud()
-        pcld.points = o3d.utility.Vector3dVector(pts_xyz)
-        pcld.colors = o3d.utility.Vector3dVector(rgb.astype(np.float32) / 255.)
-
-        return pcld
-
 
     """
     icp pose initializer includes several steps:
@@ -75,8 +46,8 @@ class ManualPoseAnnotator:
         
         depth_smoothed = fill_missing(depth, 1 / depth_scale, 1)
 
-        camera_pcld = ManualPoseAnnotator.pointcloud_from_rgb_depth(rgb, depth, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
-        smoothed_camera_pcld = ManualPoseAnnotator.pointcloud_from_rgb_depth(rgb, depth_smoothed, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients, prune_zero=False)
+        camera_pcld = pointcloud_from_rgb_depth(rgb, depth, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
+        smoothed_camera_pcld = pointcloud_from_rgb_depth(rgb, depth_smoothed, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients, prune_zero=False)
 
         print('Please select the approximate center of each object in the scene')
 
@@ -133,10 +104,10 @@ class ManualPoseAnnotator:
     """
     def annotate_pose(self, rgb, depth, depth_scale, initialization_method=None):
         if initialization_method:
-            initial_poses = initialization_method(rgb, depth, depth_scale, self.camera_intrinsic_matrix, self.camera_distortion_coefficients, self.objects)
+            initial_poses = initialization_method(rgb, depth, depth_scale, self.camera_intrinsic_matrix, self.camera_distortion_coefficients, self._objects)
         else:
             initial_poses = {}
-            for obj_id in self.objects.keys():
+            for obj_id in self._objects.keys():
                 initial_poses[obj_id] = np.eye(4)
 
         print("initialized poses", initial_poses)
@@ -144,7 +115,7 @@ class ManualPoseAnnotator:
         #TODO: Pose Annotator here
         #planning to use open3d.visualization.VisualizerWithKeyCallback to make this happen
  
-        camera_pcld = ManualPoseAnnotator.pointcloud_from_rgb_depth(rgb, depth, depth_scale, self.camera_intrinsic_matrix, self.camera_distortion_coefficients)
+        camera_pcld = pointcloud_from_rgb_depth(rgb, depth, depth_scale, self.camera_intrinsic_matrix, self.camera_distortion_coefficients)
 
         vis = o3d.visualization.VisualizerWithKeyCallback()
         vis.create_window()
@@ -162,9 +133,10 @@ class ManualPoseAnnotator:
         object_ids = list(annotated_poses.keys())
         active_obj_idx = 0
         object_meshes = {}
+        objects_visible = True
 
         
-        for obj_id, obj_data in self.objects.items():
+        for obj_id, obj_data in self._objects.items():
             obj_mesh = obj_data["mesh"]
             obj_mesh = obj_mesh.transform(annotated_poses[obj_id])
             object_meshes[obj_id] = obj_mesh
@@ -187,10 +159,29 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("1"), partial(increment_active_obj_idx))
 
 #------------------------------------------------------------------------------------------
+        #PRESS 2 to toggle object visibilities
+        def toggle_object_visibilities(vis):
+
+            print("toggling object vis!")
+
+            nonlocal objects_visible
+            if objects_visible:
+                for obj_id, obj_mesh in object_meshes.items():
+                    vis.remove_geometry(obj_mesh, reset_bounding_box=False)
+            else:
+                for obj_id, obj_mesh in object_meshes.items():
+                    vis.add_geometry(obj_mesh, reset_bounding_box=False)
+            objects_visible = not objects_visible
+            return True
+
+        vis.register_key_callback(ord("2"), partial(toggle_object_visibilities))
+
+
+#------------------------------------------------------------------------------------------
 
         #ROTATION STUFF
 
-        min_rotation_delta = 0.005
+        min_rotation_delta = 0.002
         max_rotation_delta = 0.07
         rotation_velocity = 0 #from 0 -> 1
         rotation_velocity_delta = 0.15
@@ -280,10 +271,10 @@ class ManualPoseAnnotator:
 
         #TRANSLATION STUFF
 
-        min_translation_delta = 0.005
-        max_translation_delta = 0.07
+        min_translation_delta = 0.001
+        max_translation_delta = 0.03
         translation_velocity = 0 #from 0 -> 1
-        translation_velocity_delta = 0.15
+        translation_velocity_delta = 0.1
 
         translation_delta = min_translation_delta
         last_translation_type = ""
@@ -372,5 +363,5 @@ class ManualPoseAnnotator:
 
         vis.run()
         vis.destroy_window()
-        
+
         return annotated_poses

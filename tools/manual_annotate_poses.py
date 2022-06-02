@@ -2,18 +2,20 @@
 Manually annotate the first frame of a sequence of frames. Use the camera tracking to recover the pose in subsequent frames.
 """
 
-import os, sys 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(dir_path, ".."))
 
 from PIL import Image
 import numpy as np
 import argparse
+import yaml
+
+import os, sys 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(dir_path, ".."))
+
 from camera_pose_processing.CameraPoseCleaner import CameraPoseCleaner
 from camera_pose_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from manual_pose_annotation.ManualPoseAnnotator import ManualPoseAnnotator
 from objects.object_utils import load_object_meshes
-import yaml
 
 def main():
 

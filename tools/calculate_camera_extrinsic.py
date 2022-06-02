@@ -15,12 +15,14 @@ There must have been a synchronization phase at the start of the sequence (shake
 
 """
 
+
+import numpy as np
+import argparse
+
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-import numpy as np
-import argparse
 from camera_pose_processing.CameraPoseCleaner import CameraPoseCleaner
 from camera_pose_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from camera.calculate_extrinsic.CameraOptiExtrinsicCalculator import CameraOptiExtrinsicCalculator
