@@ -11,6 +11,11 @@ class CameraPoseCleaner():
         pass
 
     @staticmethod
+    def load_from_file(cleaned_poses_path):
+        df = pd.read_csv(cleaned_poses_path)
+        return df
+
+    @staticmethod
     def clean_camera_pose_file(pose_path, write_cleaned_to_file=False):
         cleaned_pose_path = pose_path[:pose_path.rfind(".csv")] + "_cleaned.csv"
 
@@ -37,14 +42,10 @@ class CameraPoseCleaner():
         headers = headers[:first_marker_column]
         rows = [row[:first_marker_column] for row in rows]
 
-        if write_cleaned_to_file:
-            with open(cleaned_pose_path, 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow(headers)
-                for row in rows:
-                    writer.writerow(row)
-
         df = pd.DataFrame(rows, columns=headers)
+
+        if write_cleaned_to_file:
+            df.to_csv(cleaned_pose_path)
 
         return df
             

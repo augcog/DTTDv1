@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 
-
 """
 Given a csv of camera poses from OptiTrack and a sequence of RGB images, perform synchronization
 matching an RGB image with an OptiTrack pose. Uses the shake synchronization (TM) method.
@@ -9,6 +8,11 @@ matching an RGB image with an OptiTrack pose. Uses the shake synchronization (TM
 class CameraPoseSynchronizer():
     def __init__(self):
         pass
+
+    @staticmethod
+    def load_from_file(synchronized_poses_path):
+        df = pd.read_csv(synchronized_poses_path)
+        return df
 
     """
     frames_dir is directory with frames inside
@@ -19,7 +23,7 @@ class CameraPoseSynchronizer():
     Returns dict: {key = frame id, value = pose row number}
     """
     @staticmethod
-    def synchronize_camera_poses_and_frames(frames_dir, poses, synchronization_frame_end):
+    def synchronize_camera_poses_and_frames(frames_dir, poses, synchronization_frame_end, write_to_file=False):
 
         #calculate the per-frame velocity using poses
 

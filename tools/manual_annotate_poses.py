@@ -2,7 +2,6 @@
 Manually annotate the first frame of a sequence of frames. Use the camera tracking to recover the pose in subsequent frames.
 """
 
-
 from PIL import Image
 import numpy as np
 import argparse
@@ -20,21 +19,22 @@ from objects.object_utils import load_object_meshes
 def main():
 
     parser = argparse.ArgumentParser(description='Compute virtual optitrack camera to camera sensor extrinsic.')
-    parser.add_argument('opti_poses', type=str, help="raw exported optitrack tracking data csv")
     parser.add_argument('first_frame_id', type=int, help='first frame that will be used to pose annotate')
     parser.add_argument('scene_dir', type=str, help='scene directory (contains scene_meta.yaml and data (frames))')
-    parser.add_argument('object_ids', type=int, nargs='+', help='object ids of all objects in the scene we are annotating')
     parser.add_argument('--camera_intrinsic_matrix_file', type=str, default="camera/intrinsic.txt")
     parser.add_argument('--camera_distortion_coeff_file', type=str, default="camera/distortion.txt")
     parser.add_argument('--camera_extrinsic_file', type=str, default="camera/extrinsic.txt")
-    parser.add_argument('--sync_frame_end', type=int, default=100)
 
     args = parser.parse_args()
 
     camera_intrinsic_matrix = np.loadtxt(args.camera_intrinsic_matrix_file)
     camera_distortion_coeffs = np.loadtxt(args.camera_distortion_coeff_file)
+
+    scene_metadata_file = os.path.join(args.scene_dir, "scene_meta.yaml")
+    with open(scene_metadata_file, 'r') as file:
+        scene_metadata = yaml.safe_load(file)
     
-    objects = load_object_meshes(args.object_ids)
+    objects = load_object_meshes(scene_metadata["objects"])
 
     frames_dir = os.path.join(args.scene_dir, "data")
 
@@ -50,18 +50,10 @@ def main():
     object_poses = manual_pose_annotator.annotate_pose(rgb_frame, depth_frame, cam_scale, ManualPoseAnnotator.icp_pose_initializer)
 
     print("object poses")
+    print("we need to decide if we're going to save this to the 00000_meta.json or not")
     print(object_poses)
-    exit()
 
-    #visualize other frames
-
-    extrinsic = np.loadtxt(args.camera_extrinsic_file)
-    cam_pose_clean = CameraPoseCleaner()
-    cam_pose_sync = CameraPoseSynchronizer()
-
-    cleaned_opti_poses = cam_pose_clean.clean_camera_pose_file(args.opti_poses)
-    pose_synchronization = cam_pose_sync.synchronize_camera_poses_and_frames(frames_dir, cleaned_opti_poses, args.sync_frame_end)
-
-
+    #TODO: Write the code that will compute all the frame poses, and then save them to 00000_meta.json, 00001_meta.json, etc.
+    
 if __name__ == "__main__":
     main()

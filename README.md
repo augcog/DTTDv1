@@ -20,3 +20,18 @@ Final dataset output:
 - `scenes` folder certain data:
 -- `scenes/<scene number>/data/` folder
 -- `scenes/<scene number>/scene_meta.yaml` metadata
+
+# How to run
+
+ 1. Record Data
+	 1. Shake Calibration
+     2. ARUCO Calibration
+	 3. Data collection
+ 2. Process Data
+	 1. Clean raw opti poses
+	 2. Sync opti poses with frames
+	 3. calculate extrinsic (virtual to real camera)
+	 4. Manually annotate first frame object poses
+	 5. recover all frame object poses and verify correctness
+	 6. Generate semantic labeling
+

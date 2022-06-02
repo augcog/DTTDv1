@@ -34,12 +34,16 @@ class CameraOptiExtrinsicCalculator():
         affine_transform_opti = np.matmul(aff, opti_to_aruco) #1. opti -> aruco 2. aruco -> camera = opti -> camera
         return invert_affine(affine_transform_opti) #camera -> opti
 
-    def calculate_extrinsic(self, frames_dir, opti_poses_df, pose_synchronization):
+    def calculate_extrinsic(self, frames_dir, synchronized_poses):
 
         virtual_camera_to_opti_transforms = []
         camera_sensor_to_opti_transforms = []
 
-        for frame_id, opti_pose_row_number in pose_synchronization.items():
+        for index, opti_pose_row in synchronized_poses.iterrows():
+
+            print("itering synchronized poses", index)
+
+            frame_id = opti_pose_row["Frame"].item()
             frame = cv2.imread(os.path.join(frames_dir, str(frame_id).zfill(5) + "_color.jpg"))
 
             aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_5X5_250)
@@ -57,9 +61,6 @@ class CameraOptiExtrinsicCalculator():
                 camera_sensor_to_opti_transform = CameraOptiExtrinsicCalculator.calculate_camera_to_opti_transform(rvec, tvec)
 
                 camera_sensor_to_opti_transforms.append(camera_sensor_to_opti_transform)
-
-                #get optitrack pose for virtual camera
-                opti_pose_row = opti_poses_df.loc[opti_poses_df["Frame"] == opti_pose_row_number]
 
                 opti_quat = np.array(opti_pose_row["camera_Rotation_X","camera_Rotation_Y","camera_Rotation_Z","camera_Rotation_W"])
                 opti_translation = np.array(opti_pose_row["camera_Position_X","camera_Position_Y","camera_Position_Z"])

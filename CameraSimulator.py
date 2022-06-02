@@ -1,6 +1,6 @@
-import pandas as pd
+"""
 
-class CameraSimulator():
-    def __init__(self, camera_positions_csv, camera_poses_csv):
-        positions = pd.read_csv(camera_positions_csv)
-        poses = pd.read_csv(camera_poses_csv)
+Eventually, this code will be some sort of simulator using the poses of the camera and the annotated/recovered poses
+of the objects. This will just be used to verify the quality of the dataset.
+
+"""
