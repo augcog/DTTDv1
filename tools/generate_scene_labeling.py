@@ -12,6 +12,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from scene_labeling_generation.SemanticLabelingGenerator import SemanticLabelingGenerator
+from scene_labeling_generation.MetadataGenerator import MetadataGenerator
 from utils.object_utils import load_object_meshes
 
 def main():
@@ -41,14 +42,19 @@ def main():
 
     annotated_poses_frameid = annotated_poses_data["frame"]
     annotated_poses = annotated_poses_data["object_poses"]
+    annotated_poses = {k: np.array(v) for k, v in annotated_poses.items()}
 
     #TEST DATA.
     synchronized_poses = {0: np.eye(4), 1: np.eye(4)}
     synchronized_poses[1][:3,3] += np.array([0.3, 0, 0])
 
+    #generate labels
     semantic_labeling_generator = SemanticLabelingGenerator(objects, camera_intrinsic_matrix, camera_distortion_coeffs, camera_extrinsic)
     semantic_labeling_generator.generate_semantic_labels(frames_dir, annotated_poses_frameid, annotated_poses, synchronized_poses)
 
+    #metadata labeling requires semantic labeling
+    metadata_labeling_generator = MetadataGenerator(camera_extrinsic)
+    metadata_labeling_generator.generate_metadata_labels(frames_dir, annotated_poses_frameid, annotated_poses, synchronized_poses)
 
 if __name__ == "__main__":
     main()

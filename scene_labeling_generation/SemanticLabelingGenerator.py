@@ -13,7 +13,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
-from utils.frame_utils import load_rgb, write_label
+from utils.frame_utils import load_rgb, write_debug_label, write_label
 from utils.pointcloud_utils import pointcloud_from_rgb_depth
 
 class SemanticLabelingGenerator():
@@ -51,7 +51,7 @@ class SemanticLabelingGenerator():
         #use first frame coordinate system as world coordinates
         for frame_id, sensor_pose in synchronized_poses_corrected.items():
 
-            sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ sensor_pose_annotated_frame
+            sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ sensor_pose
             sensor_pose_in_annotated_coordinates_inv = invert_affine(sensor_pose_in_annotated_coordinates)
             sensor_rot = sensor_pose_in_annotated_coordinates[:3,:3]
             sensor_trans = sensor_pose_in_annotated_coordinates[:3,3]
@@ -75,8 +75,6 @@ class SemanticLabelingGenerator():
                 mask4 = obj_pts_projected[:,1] < h
 
                 mask = mask1 * mask2 * mask3 * mask4
-
-                print("number of invalid pixels to be masked out", self.number_of_points - np.count_nonzero(mask))
 
                 obj_pcld = o3d.geometry.PointCloud(obj_pcld) #copy constructor
                 obj_pcld = obj_pcld.transform(sensor_pose_in_annotated_coordinates_inv)
@@ -103,6 +101,7 @@ class SemanticLabelingGenerator():
             label_out = np.take_along_axis(label_out, depth_argmin, axis=-1).squeeze(-1)
 
             write_label(frames_dir, frame_id, label_out)
+            write_debug_label(frames_dir, frame_id, label_out * 10000)
 
 
 
