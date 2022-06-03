@@ -49,15 +49,25 @@ def main():
     manual_pose_annotator = ManualPoseAnnotator(objects, camera_intrinsic_matrix, camera_distortion_coeffs)
     object_poses = manual_pose_annotator.annotate_pose(rgb_frame, depth_frame, cam_scale, ManualPoseAnnotator.icp_pose_initializer)
 
+
+    print(object_poses)
+    
+    object_poses_out = {}
+    for obj_id, pose in object_poses.items():
+        object_poses_out[obj_id] = pose.tolist()
+
+    print(object_poses_out) 
+
     #output to annotated_object_poses file
 
-    output_file = os.path.join(args.scnee_dir, "annotated_object_poses", "annotated_object_poses.yaml")
+    output_file = os.path.join(args.scene_dir, "annotated_object_poses", "annotated_object_poses.yaml")
 
     annotated_object_poses_out = {}
     annotated_object_poses_out["frame"] = args.first_frame_id
-    annotated_object_poses_out["object_poses"] = object_poses
+    annotated_object_poses_out["object_poses"] = object_poses_out
 
-    yaml.dump(annotated_object_poses_out, output_file)
+    with open(output_file, 'w') as outfile:
+        yaml.dump(annotated_object_poses_out, outfile)
 
 if __name__ == "__main__":
     main()

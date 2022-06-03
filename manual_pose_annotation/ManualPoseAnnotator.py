@@ -131,6 +131,9 @@ class ManualPoseAnnotator:
         #State
         annotated_poses = initial_poses
         object_ids = list(annotated_poses.keys())
+
+        print("Object ids", object_ids)
+
         active_obj_idx = 0
         object_meshes = {}
         objects_visible = True
@@ -154,6 +157,9 @@ class ManualPoseAnnotator:
             nonlocal active_obj_idx
             active_obj_idx += 1
             active_obj_idx = active_obj_idx % len(object_ids)
+
+            print('new active obj idx', active_obj_idx)
+
             return False
 
         vis.register_key_callback(ord("1"), partial(increment_active_obj_idx))
@@ -195,11 +201,11 @@ class ManualPoseAnnotator:
 
             delta_rot_mat = R.from_euler("XYZ", euler).as_matrix()
             current_rot_mat = annotated_poses[object_ids[active_obj_idx]][:3,:3]
-            object_meshes[obj_id] = object_meshes[obj_id].rotate(current_rot_mat @ delta_rot_mat @ current_rot_mat.T, annotated_poses[object_ids[active_obj_idx]][:3,3])
+            object_meshes[object_ids[active_obj_idx]] = object_meshes[object_ids[active_obj_idx]].rotate(current_rot_mat @ delta_rot_mat @ current_rot_mat.T, annotated_poses[object_ids[active_obj_idx]][:3,3])
             new_annotated_pose = np.copy(annotated_poses[object_ids[active_obj_idx]])
             new_annotated_pose[:3,:3] = current_rot_mat @ delta_rot_mat
             annotated_poses[object_ids[active_obj_idx]] = new_annotated_pose
-            vis.update_geometry(object_meshes[obj_id])
+            vis.update_geometry(object_meshes[object_ids[active_obj_idx]])
 
         def update_rotation_delta(rot_type):
             nonlocal rotation_velocity
@@ -286,12 +292,12 @@ class ManualPoseAnnotator:
             current_rot_mat = annotated_poses[object_ids[active_obj_idx]][:3,:3]
             world_trans = current_rot_mat @ trans
 
-            object_meshes[obj_id] = object_meshes[obj_id].translate(world_trans)
+            object_meshes[object_ids[active_obj_idx]] = object_meshes[object_ids[active_obj_idx]].translate(world_trans)
             
             new_annotated_pose = np.copy(annotated_poses[object_ids[active_obj_idx]])
             new_annotated_pose[:3,3] += world_trans
             annotated_poses[object_ids[active_obj_idx]] = new_annotated_pose
-            vis.update_geometry(object_meshes[obj_id])
+            vis.update_geometry(object_meshes[object_ids[active_obj_idx]])
 
         def update_translation_delta(translation_type):
             nonlocal translation_velocity

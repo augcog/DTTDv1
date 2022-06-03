@@ -1,2 +1,2 @@
 cam_scale: 0.001
-objects: [0]
+objects: [1, 2]
