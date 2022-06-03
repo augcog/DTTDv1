@@ -8,6 +8,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from camera_pose_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from utils.affine_utils import invert_affine, affine_matrix_from_rotvec_trans, average_quaternion
+from utils.frame_utils import load_bgr
 
 class CameraOptiExtrinsicCalculator():
     def __init__(self, camera_intrinsic_matrix, camera_distortion_coefficients):
@@ -39,12 +40,8 @@ class CameraOptiExtrinsicCalculator():
         virtual_camera_to_opti_transforms = []
         camera_sensor_to_opti_transforms = []
 
-        for index, opti_pose_row in synchronized_poses.iterrows():
-
-            print("itering synchronized poses", index)
-
-            frame_id = opti_pose_row["Frame"].item()
-            frame = cv2.imread(os.path.join(frames_dir, str(frame_id).zfill(5) + "_color.jpg"))
+        for frame_id, opti_pose in synchronized_poses.items():
+            frame = load_bgr(frames_dir, frame_id)
 
             aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_5X5_250)
             parameters = cv2.aruco.DetectorParameters_create()
@@ -61,14 +58,6 @@ class CameraOptiExtrinsicCalculator():
                 camera_sensor_to_opti_transform = CameraOptiExtrinsicCalculator.calculate_camera_to_opti_transform(rvec, tvec)
 
                 camera_sensor_to_opti_transforms.append(camera_sensor_to_opti_transform)
-
-                opti_quat = np.array(opti_pose_row["camera_Rotation_X","camera_Rotation_Y","camera_Rotation_Z","camera_Rotation_W"])
-                opti_translation = np.array(opti_pose_row["camera_Position_X","camera_Position_Y","camera_Position_Z"])
-
-                opti_rot = R.from_quat(opti_quat).as_matrix()
-
-                opti_pose = np.hstack((opti_rot, np.expand_dims(opti_translation, -1)))
-                opti_pose = np.vstack((opti_pose, np.array([[0, 0, 0, 1]]).T))
 
                 virtual_camera_to_opti_transforms.append(opti_pose)
             

@@ -1,5 +1,7 @@
 """
-Manually annotate the first frame of a sequence of frames. Use the camera tracking to recover the pose in subsequent frames.
+Manually annotate the first frame of a sequence of frames.
+Outputs to file the annotated pose, doesn't have any dependency on optitrack poses whatsoever.
+The output will be the object poses in the coordinate system of the camera sensor of the frame provided in first_frame_id.
 """
 
 from PIL import Image
@@ -11,10 +13,9 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from camera_pose_processing.CameraPoseCleaner import CameraPoseCleaner
-from camera_pose_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from manual_pose_annotation.ManualPoseAnnotator import ManualPoseAnnotator
-from objects.object_utils import load_object_meshes
+from utils.object_utils import load_object_meshes
+from utils.frame_utils import load_rgb, load_depth
 
 def main():
 
@@ -23,7 +24,6 @@ def main():
     parser.add_argument('scene_dir', type=str, help='scene directory (contains scene_meta.yaml and data (frames))')
     parser.add_argument('--camera_intrinsic_matrix_file', type=str, default="camera/intrinsic.txt")
     parser.add_argument('--camera_distortion_coeff_file', type=str, default="camera/distortion.txt")
-    parser.add_argument('--camera_extrinsic_file', type=str, default="camera/extrinsic.txt")
 
     args = parser.parse_args()
 
@@ -38,8 +38,8 @@ def main():
 
     frames_dir = os.path.join(args.scene_dir, "data")
 
-    rgb_frame = np.array(Image.open(os.path.join(frames_dir, str(args.first_frame_id).zfill(5) + "_color.jpg")))
-    depth_frame = np.array(Image.open(os.path.join(frames_dir, str(args.first_frame_id).zfill(5) + "_depth.png")))
+    rgb_frame = load_rgb(frames_dir, args.first_frame_id)
+    depth_frame = load_depth(frames_dir, args.first_frame_id)
 
     meta = os.path.join(args.scene_dir, "scene_meta.yaml")
     with open(meta, 'r') as file:
@@ -49,11 +49,15 @@ def main():
     manual_pose_annotator = ManualPoseAnnotator(objects, camera_intrinsic_matrix, camera_distortion_coeffs)
     object_poses = manual_pose_annotator.annotate_pose(rgb_frame, depth_frame, cam_scale, ManualPoseAnnotator.icp_pose_initializer)
 
-    print("object poses")
-    print("we need to decide if we're going to save this to the 00000_meta.json or not")
-    print(object_poses)
+    #output to annotated_object_poses file
 
-    #TODO: Write the code that will compute all the frame poses, and then save them to 00000_meta.json, 00001_meta.json, etc.
-    
+    output_file = os.path.join(args.scnee_dir, "annotated_object_poses", "annotated_object_poses.yaml")
+
+    annotated_object_poses_out = {}
+    annotated_object_poses_out["frame"] = args.first_frame_id
+    annotated_object_poses_out["object_poses"] = object_poses
+
+    yaml.dump(annotated_object_poses_out, output_file)
+
 if __name__ == "__main__":
     main()

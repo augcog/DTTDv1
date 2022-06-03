@@ -27,6 +27,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from camera_pose_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from camera.calculate_extrinsic.CameraOptiExtrinsicCalculator import CameraOptiExtrinsicCalculator
+from utils.pose_utils import convert_pose_df_to_dict
 
 def main():
 
@@ -46,6 +47,7 @@ def main():
     cam_pose_sync = CameraPoseSynchronizer()
     synchronized_poses_csv = os.path.join(args.scene_dir, "camera_poses", "synchronized_camera_poses.csv")
     synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
+    synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
 
     extrinsic = cam_opti_extr_calc.calculate_extrinsic(args.frames, synchronized_poses)
 

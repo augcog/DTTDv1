@@ -3,7 +3,9 @@ import open3d as o3d
 import os, sys 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-object_ids_csv = os.path.join(dir_path, "objectids.csv")
+object_dir = os.path.join(dir_path, "..", "objects")
+
+object_ids_csv = os.path.join(object_dir, "objectids.csv")
 object_ids_df = pd.read_csv(object_ids_csv)
 """
 loads all meshes into an object dict:
@@ -21,7 +23,7 @@ def load_object_meshes(object_ids):
 
     object_meshes = {}
     for object_id, object_name in object_ids_and_names:
-        obj_path = os.path.join(dir_path, object_name, object_name + ".obj")
+        obj_path = os.path.join(object_dir, object_name, object_name + ".obj")
         obj_mesh = o3d.io.read_triangle_mesh(obj_path)
         object_meshes[object_id] = {'name': object_name, 'mesh': obj_mesh}
 
