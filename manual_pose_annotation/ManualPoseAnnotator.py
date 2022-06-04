@@ -36,20 +36,14 @@ class ManualPoseAnnotator:
         self.camera_intrinsic_matrix = camera_intrinsic_matrix
         self.camera_distortion_coefficients = camera_distortion_coefficients
 
-    """
-    icp pose initializer includes several steps:
-    1) Prompt user to click on the RGB image wherever the center of the objects are
-    2) Use Open3D's colored ICP to do some more fine-tuning
-    """
     @staticmethod
-    def icp_pose_initializer(rgb, depth, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients, objects):
+    def get_pcld_click_xyz(rgb, depth, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients, objects):
+
+        print('Please select the approximate center of each object in the scene')
         
         depth_smoothed = fill_missing(depth, 1 / depth_scale, 1)
 
-        camera_pcld = pointcloud_from_rgb_depth(rgb, depth, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
         smoothed_camera_pcld = pointcloud_from_rgb_depth(rgb, depth_smoothed, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients, prune_zero=False)
-
-        print('Please select the approximate center of each object in the scene')
 
         object_centers = {}
 
@@ -60,9 +54,24 @@ class ManualPoseAnnotator:
             x, y = plt.ginput(1)[0]
             plt.close()
 
-            print("selected point", x, y)
+            print("selected point", int(x), int(y))
 
-            object_centers[obj_id] = np.array(smoothed_camera_pcld.points)[int(y * depth.shape[1] + x)]
+            object_centers[obj_id] = np.array(smoothed_camera_pcld.points)[int(int(y) * depth.shape[1] + int(x))]
+
+        return object_centers
+
+
+    """
+    icp pose initializer includes several steps:
+    1) Prompt user to click on the RGB image wherever the center of the objects are
+    2) Use Open3D's colored ICP to do some more fine-tuning
+    """
+    @staticmethod
+    def icp_pose_initializer(rgb, depth, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients, objects):
+        
+        camera_pcld = pointcloud_from_rgb_depth(rgb, depth, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
+
+        object_centers = ManualPoseAnnotator.get_pcld_click_xyz(rgb, depth, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients, objects)
 
         object_pose_initializations = {}
 
@@ -83,7 +92,7 @@ class ManualPoseAnnotator:
             trans_init[:3,3] = obj_center
 
             transform_obj_to_scene = o3d.registration.registration_icp(
-                target_pcld, camera_pcld, .05, trans_init,
+                target_pcld, camera_pcld, .02, trans_init,
                 o3d.registration.TransformationEstimationPointToPoint())
 
             print("icp result for obj {0}".format(obj_id))
@@ -92,6 +101,26 @@ class ManualPoseAnnotator:
             transform_obj_to_scene = transform_obj_to_scene.transformation
 
             object_pose_initializations[obj_id] = transform_obj_to_scene
+
+        return object_pose_initializations
+
+    """
+    Skip the ICP. Just put the object where the user clicks.
+    """
+    @staticmethod
+    def point_pose_initializer(rgb, depth, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients, objects):
+        
+        object_centers = ManualPoseAnnotator.get_pcld_click_xyz(rgb, depth, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients, objects)
+
+        object_pose_initializations = {}
+
+        for obj_id in object_centers.keys():
+            obj_center = object_centers[obj_id]
+
+            trans_init = np.eye(4)
+            trans_init[:3,3] = obj_center
+
+            object_pose_initializations[obj_id] = trans_init
 
         return object_pose_initializations
 
@@ -112,9 +141,7 @@ class ManualPoseAnnotator:
 
         print("initialized poses", initial_poses)
 
-        #TODO: Pose Annotator here
-        #planning to use open3d.visualization.VisualizerWithKeyCallback to make this happen
- 
+        #TODO: switch camera_pcld to scene_pcld, recovered from whole scene 3D Reconstruction using synchronized poses
         camera_pcld = pointcloud_from_rgb_depth(rgb, depth, depth_scale, self.camera_intrinsic_matrix, self.camera_distortion_coefficients)
 
         vis = o3d.visualization.VisualizerWithKeyCallback()
@@ -131,8 +158,6 @@ class ManualPoseAnnotator:
         #State
         annotated_poses = initial_poses
         object_ids = list(annotated_poses.keys())
-
-        print("Object ids", object_ids)
 
         active_obj_idx = 0
         object_meshes = {}
@@ -152,13 +177,11 @@ class ManualPoseAnnotator:
         #PRESS 1 to change which object you are annotating
         def increment_active_obj_idx(vis):
 
-            print("incrementing active obj idx!")
-
             nonlocal active_obj_idx
             active_obj_idx += 1
             active_obj_idx = active_obj_idx % len(object_ids)
 
-            print('new active obj idx', active_obj_idx)
+            print("switched to modifying object {0}".format(self._objects[object_ids[active_obj_idx]]["name"]))
 
             return False
 
@@ -181,7 +204,6 @@ class ManualPoseAnnotator:
             return True
 
         vis.register_key_callback(ord("2"), partial(toggle_object_visibilities))
-
 
 #------------------------------------------------------------------------------------------
 

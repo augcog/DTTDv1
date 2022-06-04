@@ -6,11 +6,7 @@ Given objects and their poses in first camera frame, generate metadata label for
 Given objects and their poses in first camera frame, generate semantic segmentation label for every frame.
 """
 
-from multiprocessing import synchronize
-import open3d as o3d
-import cv2
 import numpy as np
-from scipy.spatial.transform import Rotation as R
 
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))

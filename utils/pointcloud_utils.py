@@ -24,14 +24,12 @@ def pointcloud_from_rgb_depth(rgb, depth, depth_scale, intrinsic, distortion, pr
     points_undistorted = np.squeeze(points_undistorted, axis=1)
 
     # Step 2. Reproject.
-    pts_xyz = []
-    for idx in range(points_undistorted.shape[0]):
-        z = Z[idx]
-        x = (points_undistorted[idx, 0] - c_x) / f_x * z
-        y = (points_undistorted[idx, 1] - c_y) / f_y * z
-        pts_xyz.append([x, y, z])
+    pts_xyz = np.zeros((points_undistorted.shape[0], 3))
 
-    pts_xyz = np.array(pts_xyz)
+    pts_xyz[:,0] = (points_undistorted[:, 0] - c_x) / f_x * Z
+    pts_xyz[:,1] = (points_undistorted[:, 1] - c_y) / f_y * Z
+    pts_xyz[:,2] = Z
+
     pcld = o3d.geometry.PointCloud()
     pcld.points = o3d.utility.Vector3dVector(pts_xyz)
     pcld.colors = o3d.utility.Vector3dVector(rgb.astype(np.float32) / 255.)

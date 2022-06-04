@@ -1,10 +1,10 @@
 """
 Manually annotate the first frame of a sequence of frames.
-Outputs to file the annotated pose, doesn't have any dependency on optitrack poses whatsoever.
+Outputs to file the annotated poses.
 The output will be the object poses in the coordinate system of the camera sensor of the frame provided in first_frame_id.
+TODO: Will eventually require the synchronized frames in order to 3d reconstruct the environment
 """
 
-from PIL import Image
 import numpy as np
 import argparse
 import yaml
@@ -48,14 +48,12 @@ def main():
 
     manual_pose_annotator = ManualPoseAnnotator(objects, camera_intrinsic_matrix, camera_distortion_coeffs)
     object_poses = manual_pose_annotator.annotate_pose(rgb_frame, depth_frame, cam_scale, ManualPoseAnnotator.icp_pose_initializer)
-
-
-    print(object_poses)
     
     object_poses_out = {}
     for obj_id, pose in object_poses.items():
         object_poses_out[obj_id] = pose.tolist()
 
+    print("annotated object poses")
     print(object_poses_out) 
 
     #output to annotated_object_poses file

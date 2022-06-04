@@ -1,9 +1,8 @@
 import pandas as pd
-import cv2
-import os
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+#TODO: This function has never been used lol
 def convert_pose_df_to_dict(pose_df):
 
     pose_out = {}
