@@ -84,7 +84,10 @@ class SemanticLabelingGenerator():
                 mask = mask1 * mask2 * mask3 * mask4
 
                 obj_pcld = o3d.geometry.PointCloud(obj_pcld) #copy constructor
+
                 obj_pcld = obj_pcld.transform(sensor_pose_in_annotated_coordinates_inv)
+                
+                
                 obj_pts_in_sensor_coordinates = np.array(obj_pcld.points)
 
                 #need z-coordinate for buffer
@@ -105,10 +108,14 @@ class SemanticLabelingGenerator():
                 depth_buffer[obj_pts_projected_flattened] = obj_zs
 
                 if debug:
+                    obj_pose_in_sensor = sensor_pose_in_annotated_coordinates_inv @ annotated_poses_single_frame[obj_id]
+                    obj_rot_in_sensor = obj_pose_in_sensor[:3,:3]
+
                     obj_colors = object_colors[obj_id][mask]
 
                     normals = np.array(obj_pcld.normals)
                     normals = normals[mask]
+                    normals = normals @ obj_rot_in_sensor.T
 
                     normals_mask = normals[:,2] < 0 #only get points with normals facing camera
                     
