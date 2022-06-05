@@ -17,16 +17,15 @@ This code assumes you have run clean_camera_poses and synchronize_camera_poses a
 
 """
 
-
-import numpy as np
 import argparse
+import numpy as np
 
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from camera_pose_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from camera.calculate_extrinsic.CameraOptiExtrinsicCalculator import CameraOptiExtrinsicCalculator
+from camera_pose_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from utils.pose_dataframe_utils import convert_pose_df_to_dict
 
 def main():

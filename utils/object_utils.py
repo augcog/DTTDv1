@@ -1,17 +1,24 @@
-import pandas as pd
+import numpy as np
 import open3d as o3d
+import pandas as pd
+from PIL import Image
+
 import os, sys 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(dir_path, ".."))
+
+from utils.mesh_utils import convert_mesh_uvs_to_colors
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 object_dir = os.path.join(dir_path, "..", "objects")
 
 object_ids_csv = os.path.join(object_dir, "objectids.csv")
 object_ids_df = pd.read_csv(object_ids_csv)
+
 """
 loads all meshes into an object dict:
 {object_id: {'name': name, 'mesh': object mesh (o3d.geometry.TriangleMesh)}}
 """
-
 def load_object_meshes(object_ids):
     object_ids_and_names = []
     for object_id in object_ids:
@@ -25,6 +32,10 @@ def load_object_meshes(object_ids):
     for object_id, object_name in object_ids_and_names:
         obj_path = os.path.join(object_dir, object_name, object_name + ".obj")
         obj_mesh = o3d.io.read_triangle_mesh(obj_path)
-        object_meshes[object_id] = {'name': object_name, 'mesh': obj_mesh}
+        obj_mesh = convert_mesh_uvs_to_colors(obj_mesh)
+        tex_path = os.path.join(object_dir, object_name, "texture_map.png")
+        tex_rgb = np.asarray(Image.open(tex_path))
+        object_meshes[object_id] = {'name': object_name, 'texture': tex_rgb, 'mesh': obj_mesh}
 
     return object_meshes
+    

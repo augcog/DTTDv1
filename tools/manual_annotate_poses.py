@@ -5,8 +5,8 @@ The output will be the object poses in the coordinate system of the camera senso
 TODO: Will eventually require the synchronized frames in order to 3d reconstruct the environment
 """
 
-import numpy as np
 import argparse
+import numpy as np
 import yaml
 
 import os, sys 

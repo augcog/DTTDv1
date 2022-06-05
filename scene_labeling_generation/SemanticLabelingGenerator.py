@@ -2,9 +2,9 @@
 Given objects and their poses in first camera frame, generate semantic segmentation label for every frame.
 """
 
-from multiprocessing import synchronize
-import open3d as o3d
+from tokenize import Number
 import cv2
+import open3d as o3d
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
@@ -13,21 +13,22 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
-from utils.frame_utils import load_rgb, write_debug_label, write_label
-from utils.pointcloud_utils import pointcloud_from_rgb_depth
+from utils.frame_utils import load_rgb, write_debug_label, write_label, write_debug_rgb
+from utils.mesh_utils import uniformly_sample_mesh_with_textures_as_colors
 
 class SemanticLabelingGenerator():
     def __init__(self, objects, camera_intrinsic_matrix, camera_distortion_coefficients, virtual_to_sensor_extrinsic, number_of_points=1000000):
         self._objects = {}
         for obj_id, obj_data in objects.items():
-            obj_pcld = obj_data["mesh"].sample_points_uniformly(number_of_points=number_of_points)
+            obj_pcld = uniformly_sample_mesh_with_textures_as_colors(obj_data["mesh"], obj_data["texture"], number_of_points)
             self._objects[obj_id] = obj_pcld
+        
         self.camera_intrinsic_matrix = camera_intrinsic_matrix
         self.camera_distortion_coefficients = camera_distortion_coefficients
         self.camera_virtual_to_sensor_extrinsic = virtual_to_sensor_extrinsic
         self.number_of_points = number_of_points
 
-    def generate_semantic_labels(self, frames_dir, annotated_poses_single_frameid, annotated_poses_single_frame, synchronized_poses):
+    def generate_semantic_labels(self, frames_dir, annotated_poses_single_frameid, annotated_poses_single_frame, synchronized_poses, debug=False):
 
         sensor_to_virtual_extrinsic = invert_affine(self.camera_virtual_to_sensor_extrinsic)
 
@@ -61,6 +62,12 @@ class SemanticLabelingGenerator():
             label_out = np.zeros((h, w, len(object_pcld_transformed))).astype(np.uint16)
             depth_out = np.ones_like(label_out).astype(np.float32) * 10000 #inf depth
 
+            if debug:
+                rgb_out = np.zeros((h, w, 3, len(object_pcld_transformed))).astype(np.uint8)
+                object_colors = {}
+                for obj_id, obj_pcld in self._objects.items():
+                    object_colors[obj_id] = (np.array(obj_pcld.colors) * 255).astype(np.uint8)
+
             for idx, (obj_id, obj_pcld) in enumerate(object_pcld_transformed.items()):
 
                 obj_pts = np.array(obj_pcld.points)
@@ -90,18 +97,56 @@ class SemanticLabelingGenerator():
 
                 label_buffer = label_out[:,:,idx].flatten()
                 depth_buffer = depth_out[:,:,idx].flatten()
+
+                if debug:
+                    rgb_buffer = rgb_out[:,:,:,idx].reshape((-1, 3))
                 
                 label_buffer[obj_pts_projected_flattened] = obj_id
                 depth_buffer[obj_pts_projected_flattened] = obj_zs
 
+                if debug:
+                    obj_colors = object_colors[obj_id][mask]
+
+                    normals = np.array(obj_pcld.normals)
+                    normals = normals[mask]
+
+                    normals_mask = normals[:,2] < 0 #only get points with normals facing camera
+                    
+                    obj_colors = obj_colors[normals_mask]
+                    normals = normals[normals_mask]
+                    obj_pts_projected_flattened = obj_pts_projected_flattened[normals_mask]
+
+                    rgb_buffer[obj_pts_projected_flattened] = obj_colors
+
                 label_out[:,:,idx] = label_buffer.reshape((h, w))
                 depth_out[:,:,idx] = depth_buffer.reshape((h, w))
+
+                if debug:
+                    rgb_out[:,:,:,idx] = rgb_buffer.reshape((h, w, 3))
 
             depth_argmin = np.expand_dims(np.argmin(depth_out, axis=-1), -1)
             label_out = np.take_along_axis(label_out, depth_argmin, axis=-1).squeeze(-1)
 
+            if debug:
+                rgb_debug = np.copy(rgb)
+
+                depth_argmin = np.tile(np.expand_dims(depth_argmin, 2), (1, 1, 3, 1))
+                rgb_out = np.take_along_axis(rgb_out, depth_argmin, axis=-1).squeeze(-1)
+                
+                rgb_debug = rgb_debug.reshape((-1, 3))
+                rgb_out = rgb_out.reshape((-1, 3))
+
+                rgb_out_mask = np.sum(rgb_out, axis=-1) > 0
+                rgb_debug[rgb_out_mask] = rgb_out[rgb_out_mask]
+
+                rgb_debug = rgb_debug.reshape((h, w, 3))
+
+                write_debug_rgb(frames_dir, frame_id, rgb_debug)
+
             write_label(frames_dir, frame_id, label_out)
-            write_debug_label(frames_dir, frame_id, label_out * 10000)
+
+            if debug:
+                write_debug_label(frames_dir, frame_id, label_out * 10000)
 
 
 

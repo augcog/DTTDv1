@@ -8,11 +8,10 @@ Can initialize the pose using
 
 """
 
-import numpy as np
-import cv2
-import open3d as o3d
-import matplotlib.pyplot as plt
 from functools import partial
+import matplotlib.pyplot as plt
+import numpy as np
+import open3d as o3d
 from scipy.spatial.transform import Rotation as R
 
 import os, sys 
@@ -241,23 +240,23 @@ class ManualPoseAnnotator:
 
             rotation_delta = min_rotation_delta + (max_rotation_delta - min_rotation_delta) * rotation_velocity
 
-        #PRESS I to increase alpha (euler angle rotation)
+        #PRESS U to increase alpha (euler angle rotation)
         def increase_rotation_alpha(vis):
             update_rotation_delta("incA")
             euler = np.array([rotation_delta, 0, 0])
             rotate_using_euler(vis, euler)
             return True
         
-        vis.register_key_callback(ord("I"), partial(increase_rotation_alpha))
+        vis.register_key_callback(ord("U"), partial(increase_rotation_alpha))
 
-        #PRESS J to decrease alpha (euler angle rotation)
+        #PRESS I to decrease alpha (euler angle rotation)
         def decrease_rotation_alpha(vis):
             update_rotation_delta("decA")
             euler = np.array([-rotation_delta, 0, 0])
             rotate_using_euler(vis, euler)
             return True
         
-        vis.register_key_callback(ord("J"), partial(decrease_rotation_alpha))
+        vis.register_key_callback(ord("I"), partial(decrease_rotation_alpha))
 
         #PRESS O to increase beta (euler angle rotation)
         def increase_rotation_beta(vis):
@@ -268,23 +267,23 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("O"), partial(increase_rotation_beta))
 
-        #PRESS K to decrease beta (euler angle rotation)
+        #PRESS P to decrease beta (euler angle rotation)
         def decrease_rotation_beta(vis):
             update_rotation_delta("decB")
             euler = np.array([0, -rotation_delta, 0])
             rotate_using_euler(vis, euler)
             return True
         
-        vis.register_key_callback(ord("K"), partial(decrease_rotation_beta))
+        vis.register_key_callback(ord("P"), partial(decrease_rotation_beta))
 
-        #PRESS P to increase gamma (euler angle rotation)
+        #PRESS K to increase gamma (euler angle rotation)
         def increase_rotation_gamma(vis):
             update_rotation_delta("incC")
             euler = np.array([0, 0, rotation_delta])
             rotate_using_euler(vis, euler)
             return True
         
-        vis.register_key_callback(ord("P"), partial(increase_rotation_gamma))
+        vis.register_key_callback(ord("K"), partial(increase_rotation_gamma))
 
         #PRESS L to decrease beta (euler angle rotation)
         def decrease_rotation_gamma(vis):
@@ -299,10 +298,10 @@ class ManualPoseAnnotator:
 
         #TRANSLATION STUFF
 
-        min_translation_delta = 0.001
-        max_translation_delta = 0.03
+        min_translation_delta = 0.0005
+        max_translation_delta = 0.01
         translation_velocity = 0 #from 0 -> 1
-        translation_velocity_delta = 0.1
+        translation_velocity_delta = 0.05
 
         translation_delta = min_translation_delta
         last_translation_type = ""
@@ -333,14 +332,14 @@ class ManualPoseAnnotator:
 
             translation_delta = min_translation_delta + (max_translation_delta - min_translation_delta) * translation_velocity
 
-        #PRESS G to increase X
+        #PRESS F to increase X
         def increase_x(vis):
             update_translation_delta("incX")
             trans = np.array([translation_delta, 0, 0])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("G"), partial(increase_x))
+        vis.register_key_callback(ord("F"), partial(increase_x))
 
         #PRESS H to decrease X
         def decrease_x(vis):
@@ -360,32 +359,32 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("V"), partial(increase_y))
 
-        #PRESS B to decrease Y
+        #PRESS N to decrease Y
         def decrease_y(vis):
             update_translation_delta("decY")
             trans = np.array([0, -translation_delta, 0])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("B"), partial(decrease_y))
+        vis.register_key_callback(ord("N"), partial(decrease_y))
 
-        #PRESS N to increase Z
+        #PRESS G to increase Z
         def increase_z(vis):
             update_translation_delta("incZ")
             trans = np.array([0, 0, translation_delta])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("N"), partial(increase_z))
+        vis.register_key_callback(ord("G"), partial(increase_z))
 
-        #PRESS M to decrease Z
+        #PRESS B to decrease Z
         def decrease_z(vis):
             update_translation_delta("decZ")
             trans = np.array([0, 0, -translation_delta])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("M"), partial(decrease_z))
+        vis.register_key_callback(ord("B"), partial(decrease_z))
 
 #------------------------------------------------------------------------------------------   
 

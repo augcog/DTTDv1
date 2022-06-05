@@ -4,15 +4,15 @@ Specifically generates 00000_label.png and 00000_meta.json.
 """
 
 import argparse
-import yaml
 import numpy as np
+import yaml
 
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from scene_labeling_generation.SemanticLabelingGenerator import SemanticLabelingGenerator
 from scene_labeling_generation.MetadataGenerator import MetadataGenerator
+from scene_labeling_generation.SemanticLabelingGenerator import SemanticLabelingGenerator
 from utils.object_utils import load_object_meshes
 
 def main():
@@ -50,7 +50,7 @@ def main():
 
     #generate labels
     semantic_labeling_generator = SemanticLabelingGenerator(objects, camera_intrinsic_matrix, camera_distortion_coeffs, camera_extrinsic)
-    semantic_labeling_generator.generate_semantic_labels(frames_dir, annotated_poses_frameid, annotated_poses, synchronized_poses)
+    semantic_labeling_generator.generate_semantic_labels(frames_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, debug=True)
 
     #metadata labeling requires semantic labeling
     metadata_labeling_generator = MetadataGenerator(camera_extrinsic)
