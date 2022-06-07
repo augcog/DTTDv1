@@ -45,4 +45,3 @@ class CameraPoseSynchronizer():
     def synchronize_camera_poses_from_csv_and_frames(frames_dir, poses_csv, synchronization_frame_end):
         poses = pd.read_csv(poses_csv)
         return CameraPoseSynchronizer.synchronize_camera_poses_and_frames(frames_dir, poses, synchronization_frame_end)
-

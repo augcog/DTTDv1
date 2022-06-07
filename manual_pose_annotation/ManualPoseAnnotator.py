@@ -18,7 +18,9 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
+from utils.affine_utils import invert_affine
 from utils.depth_utils import fill_missing
+from utils.frame_utils import load_rgb, load_depth, load_o3d_rgb, load_o3d_depth
 from utils.pointcloud_utils import pointcloud_from_rgb_depth
 
 class ManualPoseAnnotator:
@@ -27,13 +29,14 @@ class ManualPoseAnnotator:
     objects contains triangle meshes for each object
     object coordinates are in meters
     """
-    def __init__(self, objects, camera_intrinsic_matrix, camera_distortion_coefficients):
+    def __init__(self, objects, camera_intrinsic_matrix, camera_distortion_coefficients, camera_extrinsic):
         self._objects = {}
         for obj_id, obj_data in objects.items():
             self._objects[obj_id] = {"name" : obj_data["name"]}
             self._objects[obj_id]["mesh"] = o3d.geometry.TriangleMesh(obj_data["mesh"]) #copy the geometry
         self.camera_intrinsic_matrix = camera_intrinsic_matrix
         self.camera_distortion_coefficients = camera_distortion_coefficients
+        self.camera_extrinsic = camera_extrinsic
 
     @staticmethod
     def get_pcld_click_xyz(rgb, depth, depth_scale, camera_intrinsic_matrix, camera_distortion_coefficients, objects):
@@ -130,7 +133,12 @@ class ManualPoseAnnotator:
     camera distortion coefficients, and list of object triangle meshes
     and returns a dict {obj_id: transform initialization}, the affine transform for each object
     """
-    def annotate_pose(self, rgb, depth, depth_scale, initialization_method=None):
+    def annotate_pose(self, frames_dir, synchronized_poses, first_frame_id, num_frames, depth_scale, initialization_method=None):
+
+        rgb = load_rgb(frames_dir, first_frame_id)
+        depth = load_depth(frames_dir, first_frame_id)
+        h, w, _ = rgb.shape
+
         if initialization_method:
             initial_poses = initialization_method(rgb, depth, depth_scale, self.camera_intrinsic_matrix, self.camera_distortion_coefficients, self._objects)
         else:
@@ -140,9 +148,46 @@ class ManualPoseAnnotator:
 
         print("initialized poses", initial_poses)
 
-        #TODO: switch camera_pcld to scene_pcld, recovered from whole scene 3D Reconstruction using synchronized poses
-        camera_pcld = pointcloud_from_rgb_depth(rgb, depth, depth_scale, self.camera_intrinsic_matrix, self.camera_distortion_coefficients)
+        #compute 3d reconstruction of scene in first_frame_id coordinates
 
+        sensor_to_virtual = invert_affine(self.camera_extrinsic)
+
+        corrected_synchronized_poses = {}
+        for frame_id, virtual_to_opti in synchronized_poses.items():
+            #discard previous frames
+            if frame_id < first_frame_id:
+                continue
+            corrected_synchronized_poses[frame_id] = virtual_to_opti @ sensor_to_virtual
+
+        first_frame_id_pose_inv = invert_affine(corrected_synchronized_poses[first_frame_id]) #opti -> first frame id pose
+
+        poses_in_first_frame_id_coords = {}
+        for frame_id, sensor_to_opti in corrected_synchronized_poses.items():
+            poses_in_first_frame_id_coords[frame_id] = first_frame_id_pose_inv @ sensor_to_opti
+
+        #settings for 3d recon
+        max_depth = 5.00
+        voxel_size = 0.007
+        sdf_trunc = voxel_size * 5
+
+        intr = o3d.camera.PinholeCameraIntrinsic()
+        intr.set_intrinsics(w, h, self.camera_intrinsic_matrix[0][0], self.camera_intrinsic_matrix[1][1], self.camera_intrinsic_matrix[0][2], self.camera_intrinsic_matrix[1][2])
+
+        volume = o3d.integration.ScalableTSDFVolume(
+            voxel_length=voxel_size,
+            sdf_trunc=sdf_trunc,
+            color_type=o3d.integration.TSDFVolumeColorType.RGB8)
+
+        for frame_id in range(first_frame_id, num_frames):
+            rgb = load_o3d_rgb(frames_dir, frame_id)
+            depth = load_o3d_depth(frames_dir, frame_id)
+            rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
+                rgb, depth, depth_trunc=max_depth, convert_rgb_to_intensity=False)
+            extr = invert_affine(poses_in_first_frame_id_coords[frame_id])
+            volume.integrate(rgbd_image, intr, extr)
+
+        camera_recon = volume.extract_triangle_mesh()
+            
         vis = o3d.visualization.VisualizerWithKeyCallback()
         vis.create_window()
         vis.get_render_option().background_color = np.asarray([0, 0, 0])
@@ -152,7 +197,7 @@ class ManualPoseAnnotator:
         view_control = vis.get_view_control()
 
         #add camera pointcloud
-        vis.add_geometry(camera_pcld)
+        vis.add_geometry(camera_recon)
 
         #State
         annotated_poses = initial_poses

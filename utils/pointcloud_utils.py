@@ -35,3 +35,4 @@ def pointcloud_from_rgb_depth(rgb, depth, depth_scale, intrinsic, distortion, pr
     pcld.colors = o3d.utility.Vector3dVector(rgb.astype(np.float32) / 255.)
 
     return pcld
+    

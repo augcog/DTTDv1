@@ -55,8 +55,3 @@ class MetadataGenerator():
             frame_metadata["object_poses"] = object_poses_in_sensor
 
             write_meta(frames_dir, frame_id, frame_metadata)
-
-
-
-
-

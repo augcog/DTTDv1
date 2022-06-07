@@ -29,8 +29,9 @@ def uniformly_sample_mesh_with_textures_as_colors(mesh, texture, number_of_point
     texture = texture.reshape((-1, 3))
 
     uvs_flattened = np.floor(uvs[:,0] * texture_x + np.floor(( 1. - uvs[:,1]) * texture_y) * texture_x).astype(np.int)
-    
+
     colors = (texture[uvs_flattened] / 255.).astype(np.float32)
     pcld.colors = o3d.utility.Vector3dVector(colors)
 
     return pcld
+    

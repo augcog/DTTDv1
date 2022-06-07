@@ -46,4 +46,3 @@ class CameraPoseCleaner():
             df.to_csv(cleaned_pose_path)
 
         return df
-            

@@ -154,7 +154,3 @@ class SemanticLabelingGenerator():
 
             if debug:
                 write_debug_label(frames_dir, frame_id, label_out * 10000)
-
-
-
-

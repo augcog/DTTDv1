@@ -4,7 +4,7 @@ from scipy.spatial.transform import Rotation as R
 def invert_affine(affine):
     return np.linalg.inv(affine)
 
-#quats of shape (4xN)
+#quats of shape (Nx4)
 #return average quaternion
 
 def average_quaternion(quats):

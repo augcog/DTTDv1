@@ -1,8 +1,9 @@
-import os
 import cv2
-from PIL import Image
-import numpy as np
 import json
+import numpy as np
+import open3d as o3d
+import os
+from PIL import Image
 
 def write_bgr(frames_dir, frame_id, frame):
     frame_name = os.path.join(frames_dir, str(frame_id).zfill(5) + "_color.jpg")
@@ -28,6 +29,16 @@ def load_rgb(frames_dir, frame_id):
 
 def load_depth(frames_dir, frame_id):
     frame = cv2.imread(os.path.join(frames_dir, str(frame_id).zfill(5) + "_depth.png"), cv2.IMREAD_UNCHANGED)
+    return frame
+
+def load_o3d_rgb(frames_dir, frame_id):
+    path = os.path.join(frames_dir, str(frame_id).zfill(5) + "_color.jpg")
+    frame = o3d.io.read_image(path)
+    return frame
+
+def load_o3d_depth(frames_dir, frame_id):
+    path = os.path.join(frames_dir, str(frame_id).zfill(5) + "_depth.png")
+    frame = o3d.io.read_image(path)
     return frame
 
 def write_label(frames_dir, frame_id, frame):
