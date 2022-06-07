@@ -6,7 +6,6 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from camera_pose_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from utils.affine_utils import invert_affine, affine_matrix_from_rotvec_trans, average_quaternion
 from utils.frame_utils import load_bgr
 
@@ -15,22 +14,18 @@ class CameraOptiExtrinsicCalculator():
         self.camera_intrinsic_matrix = camera_intrinsic_matrix
         self.camera_distortion_coefficients = camera_distortion_coefficients
 
-    #assumed that the optitrack origin is 4cm above the aruco marker taped to the ground
-    @staticmethod
-    def add_optitrack_aruco_offset(aff, vertical_offset=0.04):
-        rot = aff[:3, :3]
-        trans_offset = rot @ np.array([[0], [0], [vertical_offset]])
-        aff[:3,3] += trans_offset
-        return aff
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        self.aruco_to_opti = np.loadtxt(os.path.join(dir_path, "aruco_marker.txt"))
 
     @staticmethod
-    def calculate_camera_to_opti_transform(rot_vec, trans):
+    def calculate_camera_to_opti_transform(rot_vec, trans, aruco_to_opti_translation):
         aff = affine_matrix_from_rotvec_trans(rot_vec, trans) #aruco -> camera
-        aff = CameraOptiExtrinsicCalculator.add_optitrack_aruco_offset(aff) #aruco -> camera
-        aruco_to_opti = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]) #aruco -> opti (rot (3x3))
+        aruco_to_opti_rot = np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]]) #aruco -> opti (rot (3x3))
 
-        opti_to_aruco = np.eye(4)
-        opti_to_aruco[:3,:3] = np.linalg.inv(aruco_to_opti) #opti -> aruco (affine (4x4))
+        aruco_to_opti = np.eye(4)
+        aruco_to_opti[:3,:3] = aruco_to_opti_rot
+        aruco_to_opti[:3,3] = aruco_to_opti_translation
+        opti_to_aruco = invert_affine(aruco_to_opti)
 
         affine_transform_opti = np.matmul(aff, opti_to_aruco) #1. opti -> aruco 2. aruco -> camera = opti -> camera
         return invert_affine(affine_transform_opti) #camera -> opti
@@ -43,10 +38,10 @@ class CameraOptiExtrinsicCalculator():
         for frame_id, opti_pose in synchronized_poses.items():
             frame = load_bgr(frames_dir, frame_id)
 
-            aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_5X5_250)
+            aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
             parameters = cv2.aruco.DetectorParameters_create()
             corners, ids, rejected_img_points = cv2.aruco.detectMarkers(frame, aruco_dict, parameters=parameters, cameraMatrix=self.camera_intrinsic_matrix, distCoeff=self.camera_distortion_coefficients)
-            
+
             if np.all(ids is not None):  # If there are markers found by detector
 
                 #only should have 1 marker placed near origin of opti
@@ -55,10 +50,16 @@ class CameraOptiExtrinsicCalculator():
                 # Estimate pose of each marker and return the values rvec and tvec---different from camera coefficients
                 rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners, 0.02, self.camera_intrinsic_matrix, self.camera_distortion_coefficients)
 
-                camera_sensor_to_opti_transform = CameraOptiExtrinsicCalculator.calculate_camera_to_opti_transform(rvec, tvec)
+                #the aruco estimator assumes the marker is of size 5cmx5cm, we are using a marker of size 15cmx15cm
+                rvec = rvec.squeeze()
+                tvec = tvec.squeeze() * 9
+
+                #the radius of the marker is 5mm
+                aruco_to_opti_translation = self.aruco_to_opti - np.array([0, 0.005, 0])
+
+                camera_sensor_to_opti_transform = CameraOptiExtrinsicCalculator.calculate_camera_to_opti_transform(rvec, tvec, aruco_to_opti_translation)
 
                 camera_sensor_to_opti_transforms.append(camera_sensor_to_opti_transform)
-
                 virtual_camera_to_opti_transforms.append(opti_pose)
             
             else:
@@ -69,7 +70,7 @@ class CameraOptiExtrinsicCalculator():
         extrinsics = []
 
         for camera_to_opti, virtual_to_opti in zip(camera_sensor_to_opti_transforms, virtual_camera_to_opti_transforms):
-            extrinsics.append([invert_affine(camera_to_opti) @ virtual_to_opti])
+            extrinsics.append(invert_affine(camera_to_opti) @ virtual_to_opti)
 
         extrinsics = np.array(extrinsics)
 
@@ -85,7 +86,8 @@ class CameraOptiExtrinsicCalculator():
         print("translation diffs (min, max, mean)", np.min(translation_diffs), np.max(translation_diffs), np.mean(translation_diffs))
 
         #return average extrinsic
-        translation = np.mean(extrinsics[:,:3,3])
+
+        translation = np.mean(extrinsics[:,:3,3], axis=0)
 
         extrinsic_rots = extrinsics[:,:3,:3]
         extrinsic_quats = R.from_matrix(extrinsic_rots).as_quat()

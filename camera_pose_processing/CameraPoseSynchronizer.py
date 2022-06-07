@@ -19,7 +19,7 @@ class CameraPoseSynchronizer():
     synchronization_frame_end: stop calculating and looking for peaks past this frame number.
     Basically, calculate synchronization only using frames before this frame number. 
 
-    Returns dict: {key = frame id, value = pose row number}
+    Returns dict: {key = frame id, value = pose}
     """
     @staticmethod
     def synchronize_camera_poses_and_frames(frames_dir, poses, synchronization_frame_end, write_to_file=False):

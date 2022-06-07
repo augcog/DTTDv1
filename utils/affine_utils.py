@@ -2,28 +2,17 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 def invert_affine(affine):
-    assert(affine.shape == (4, 4))
-
-    invert_affine = np.zeros((4, 4))
-    invert_affine[:3,:3] = affine[:3,:3].T
-    invert_affine[:3,3] = -affine[:3,3]
-    invert_affine[3,3] = 1.
-
-    return invert_affine
+    return np.linalg.inv(affine)
 
 #quats of shape (4xN)
 #return average quaternion
 
 def average_quaternion(quats):
-    assert(quats.shape[0] == 4)
+    assert(quats.shape[1] == 4)
 
-    q = quats @ quats.T
+    avg_quat = np.linalg.eigh(np.einsum('ij,ik,i->...jk', quats, quats, np.ones((quats.shape[0]))))[1][:, -1]
 
-    w, v = np.linalg.eig(q)
-
-    max_eigenvalue_idx = np.argmax(w)
-    return v[:,max_eigenvalue_idx]
-
+    return avg_quat
 
 def affine_matrix_from_rotvec_trans(rot_vec, trans):
     rot = R.from_rotvec(rot_vec)

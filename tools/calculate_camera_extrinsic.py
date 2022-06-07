@@ -48,13 +48,15 @@ def main():
     synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
     synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
 
-    extrinsic = cam_opti_extr_calc.calculate_extrinsic(args.frames, synchronized_poses)
+    frames_dir = os.path.join(args.scene_dir, "data")
+
+    extrinsic = cam_opti_extr_calc.calculate_extrinsic(frames_dir, synchronized_poses)
 
     print("computed extrinsic:", extrinsic)
     
     if args.output:
         print("saving extrinsic to file {0}".format(args.output))
-        np.savetxt(extrinsic, args.output)
+        np.savetxt(args.output, extrinsic)
 
 if __name__ == "__main__":
     main()
