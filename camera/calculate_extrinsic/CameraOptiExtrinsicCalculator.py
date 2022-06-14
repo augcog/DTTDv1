@@ -25,6 +25,7 @@ class CameraOptiExtrinsicCalculator():
         aruco_to_opti = np.eye(4)
         aruco_to_opti[:3,:3] = aruco_to_opti_rot
         aruco_to_opti[:3,3] = aruco_to_opti_translation
+
         opti_to_aruco = invert_affine(aruco_to_opti)
 
         affine_transform_opti = np.matmul(aff, opti_to_aruco) #1. opti -> aruco 2. aruco -> camera = opti -> camera

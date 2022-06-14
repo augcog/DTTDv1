@@ -7,7 +7,7 @@ def convert_pose_df_to_dict(pose_df):
     pose_out = {}
 
     for index, opti_pose_row in pose_df.iterrows():
-        frame_id = opti_pose_row["Frame"]
+        frame_id = opti_pose_row["Frame"].astype(int)
 
         opti_quat = np.array(opti_pose_row[["camera_Rotation_X","camera_Rotation_Y","camera_Rotation_Z","camera_Rotation_W"]])
         opti_translation = np.array(opti_pose_row[["camera_Position_X","camera_Position_Y","camera_Position_Z"]])
@@ -21,4 +21,3 @@ def convert_pose_df_to_dict(pose_df):
         pose_out[frame_id] = opti_pose
 
     return pose_out
-    
