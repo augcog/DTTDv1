@@ -1,8 +1,7 @@
 """
 Manually annotate the first frame of a sequence of frames.
 Outputs to file the annotated poses.
-The output will be the object poses in the coordinate system of the camera sensor of the frame provided in first_frame_id.
-TODO: Will eventually require the synchronized frames in order to 3d reconstruct the environment
+The output will be the object poses in the coordinate system of the camera sensor of the frame provided in frame.
 """
 
 import argparse
@@ -23,6 +22,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='Compute virtual optitrack camera to camera sensor extrinsic.')
     parser.add_argument('scene_dir', type=str, help='scene directory (contains scene_meta.yaml and data (frames))')
+    parser.add_argument('--frame', type=int, default=0, help='which frame to use as coordinate system for annotation')
 
     args = parser.parse_args()
 
@@ -32,19 +32,13 @@ def main():
     
     objects = load_object_meshes(scene_metadata["objects"])
 
-    meta = os.path.join(args.scene_dir, "scene_meta.yaml")
-    with open(meta, 'r') as file:
-        meta = yaml.safe_load(file)
-        cam_scale = meta["cam_scale"]
-        num_frames = meta["num_frames"]
-
     cam_pose_sync = CameraPoseSynchronizer()
     synchronized_poses_csv = os.path.join(args.scene_dir, "camera_poses", "camera_poses_synchronized.csv")
     synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
     synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
 
     manual_pose_annotator = ManualPoseAnnotator(objects)
-    object_poses = manual_pose_annotator.annotate_pose(args.scene_dir, synchronized_poses, ManualPoseAnnotator.icp_pose_initializer)
+    object_poses = manual_pose_annotator.annotate_pose(args.scene_dir, synchronized_poses, args.frame, ManualPoseAnnotator.icp_pose_initializer)
     
     object_poses_out = {}
     for obj_id, pose in object_poses.items():
@@ -58,7 +52,7 @@ def main():
     output_file = os.path.join(args.scene_dir, "annotated_object_poses", "annotated_object_poses.yaml")
 
     annotated_object_poses_out = {}
-    annotated_object_poses_out["frame"] = args.first_frame_id
+    annotated_object_poses_out["frame"] = args.frame
     annotated_object_poses_out["object_poses"] = object_poses_out
 
     with open(output_file, 'w') as outfile:

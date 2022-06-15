@@ -1,5 +1,7 @@
 """
 Given objects and their poses in first camera frame, generate semantic segmentation label for every frame.
+
+NOTE: This doesn't deal with scene occlusions, only object occlusions.
 """
 
 from tokenize import Number

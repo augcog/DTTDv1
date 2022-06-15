@@ -133,7 +133,7 @@ class ManualPoseAnnotator:
     camera distortion coefficients, and list of object triangle meshes
     and returns a dict {obj_id: transform initialization}, the affine transform for each object
     """
-    def annotate_pose(self, scene_dir, synchronized_poses, initialization_method=None):
+    def annotate_pose(self, scene_dir, synchronized_poses, frameid, initialization_method=None):
 
         frames_dir = os.path.join(scene_dir, "data")
 
@@ -150,8 +150,8 @@ class ManualPoseAnnotator:
         camera_distortion_coefficients = load_distortion(camera_name)
         camera_extrinsic = load_extrinsics(camera_name)
 
-        rgb = load_rgb(frames_dir, 0)
-        depth = load_depth(frames_dir, 0)
+        rgb = load_rgb(frames_dir, frameid)
+        depth = load_depth(frames_dir, frameid)
         h, w, _ = rgb.shape
 
         if initialization_method:
@@ -171,7 +171,7 @@ class ManualPoseAnnotator:
         for frame_id, virtual_to_opti in synchronized_poses.items():
             corrected_synchronized_poses[frame_id] = virtual_to_opti @ sensor_to_virtual
 
-        first_frame_id_pose_inv = invert_affine(corrected_synchronized_poses[0]) #opti -> first frame id pose
+        first_frame_id_pose_inv = invert_affine(corrected_synchronized_poses[frameid]) #opti -> first frame id pose
 
         poses_in_first_frame_id_coords = {}
         for frame_id, sensor_to_opti in corrected_synchronized_poses.items():

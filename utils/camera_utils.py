@@ -16,6 +16,12 @@ def load_distortion(camera_name):
     distortion_path = os.path.join(camera_path, "distortion.txt")
     return np.loadtxt(distortion_path)
 
+def write_extrinsics(camera_name, extrinsics):
+    camera_path = os.path.join(cameras_dir, camera_name)
+    assert(os.path.isdir(camera_path))
+    extrinsic_path = os.path.join(camera_path, "extrinsic.txt")
+    np.savetxt(extrinsic_path, extrinsics)
+
 def load_extrinsics(camera_name):
     camera_path = os.path.join(cameras_dir, camera_name)
     assert(os.path.isdir(camera_path))

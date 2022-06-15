@@ -32,7 +32,6 @@ def main():
 
     parser = argparse.ArgumentParser(description='Compute virtual optitrack camera to camera sensor extrinsic.')
     parser.add_argument('scene_dir', type=str, help='scene directory (contains scene_meta.yaml and data (frames) and camera_poses)')
-    parser.add_argument('--output', type=str, default="camera/extrinsic.txt")
 
     args = parser.parse_args()
 
@@ -43,13 +42,9 @@ def main():
     synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
     synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
     
-    extrinsic = cam_opti_extr_calc.calculate_extrinsic(args.scene_dir, synchronized_poses)
+    extrinsic = cam_opti_extr_calc.calculate_extrinsic(args.scene_dir, synchronized_poses, write_to_file=True)
 
     print("computed extrinsic:", extrinsic)
     
-    if args.output:
-        print("saving extrinsic to file {0}".format(args.output))
-        np.savetxt(args.output, extrinsic)
-
 if __name__ == "__main__":
     main()

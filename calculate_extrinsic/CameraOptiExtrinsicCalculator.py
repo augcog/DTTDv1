@@ -8,7 +8,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine, affine_matrix_from_rotvec_trans, average_quaternion
-from utils.camera_utils import load_intrinsics, load_distortion
+from utils.camera_utils import load_intrinsics, load_distortion, write_extrinsics
 from utils.frame_utils import load_bgr
 
 class CameraOptiExtrinsicCalculator():
@@ -42,7 +42,7 @@ class CameraOptiExtrinsicCalculator():
         aruco_to_opti_translation = self.aruco_to_opti - np.array([0, 0.005, 0])
         return CameraOptiExtrinsicCalculator.calculate_aruco_to_opti_transform(aruco_to_opti_translation)
 
-    def calculate_extrinsic(self, scene_dir, synchronized_poses):
+    def calculate_extrinsic(self, scene_dir, synchronized_poses, write_to_file=False):
 
         scene_metadata_file = os.path.join(scene_dir, "scene_meta.yaml")
         with open(scene_metadata_file, 'r') as file:
@@ -119,5 +119,8 @@ class CameraOptiExtrinsicCalculator():
         extrinsic = np.eye(4)
         extrinsic[:3,:3] = R.from_quat(quat).as_matrix()
         extrinsic[:3,3] = translation
+
+        if write_to_file:
+            write_extrinsics(camera_name, extrinsic)
 
         return extrinsic
