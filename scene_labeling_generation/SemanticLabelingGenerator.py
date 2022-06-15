@@ -7,30 +7,42 @@ import cv2
 import open3d as o3d
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+import yaml
 
-import os, sys 
+import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
+from utils.camera_utils import load_extrinsics, load_intrinsics, load_distortion
 from utils.frame_utils import load_rgb, write_debug_label, write_label, write_debug_rgb
 from utils.mesh_utils import uniformly_sample_mesh_with_textures_as_colors
 
 class SemanticLabelingGenerator():
-    def __init__(self, objects, camera_intrinsic_matrix, camera_distortion_coefficients, virtual_to_sensor_extrinsic, number_of_points=1000000):
+    def __init__(self, objects, number_of_points=1000000):
         self._objects = {}
         for obj_id, obj_data in objects.items():
             obj_pcld = uniformly_sample_mesh_with_textures_as_colors(obj_data["mesh"], obj_data["texture"], number_of_points)
             self._objects[obj_id] = obj_pcld
         
-        self.camera_intrinsic_matrix = camera_intrinsic_matrix
-        self.camera_distortion_coefficients = camera_distortion_coefficients
-        self.camera_virtual_to_sensor_extrinsic = virtual_to_sensor_extrinsic
         self.number_of_points = number_of_points
 
-    def generate_semantic_labels(self, frames_dir, annotated_poses_single_frameid, annotated_poses_single_frame, synchronized_poses, debug=False):
+    def generate_semantic_labels(self, scene_dir, annotated_poses_single_frameid, annotated_poses_single_frame, synchronized_poses, debug=False):
 
-        sensor_to_virtual_extrinsic = invert_affine(self.camera_virtual_to_sensor_extrinsic)
+        frames_dir = os.path.join(scene_dir, "data")
+
+        scene_metadata_file = os.path.join(scene_dir, "scene_meta.yaml")
+
+        with open(scene_metadata_file, 'r') as file:
+            scene_metadata = yaml.safe_load(file)
+
+        camera_name = scene_metadata["camera"]
+
+        camera_intrinsics = load_intrinsics(camera_name)
+        camera_distortion = load_distortion(camera_name)
+        camera_extrinsics = load_extrinsics(camera_name)
+
+        sensor_to_virtual_extrinsic = invert_affine(camera_extrinsics)
 
         #apply extrinsic to convert every pose to actual camera sensor pose
         synchronized_poses_corrected = {}
@@ -72,7 +84,7 @@ class SemanticLabelingGenerator():
 
                 obj_pts = np.array(obj_pcld.points)
 
-                obj_pts_projected, _ = cv2.projectPoints(obj_pts, sensor_rvec, sensor_trans, self.camera_intrinsic_matrix, self.camera_distortion_coefficients)
+                obj_pts_projected, _ = cv2.projectPoints(obj_pts, sensor_rvec, sensor_trans, camera_intrinsics, camera_distortion)
                 obj_pts_projected = obj_pts_projected.squeeze(1) #(Nx2)
                 obj_pts_projected = np.round(obj_pts_projected).astype(np.int)
 

@@ -7,21 +7,35 @@ Given objects and their poses in first camera frame, generate semantic segmentat
 """
 
 import numpy as np
+import yaml
 
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
+from utils.camera_utils import load_extrinsics
 from utils.frame_utils import write_meta, load_label
 
 class MetadataGenerator():
-    def __init__(self, virtual_to_sensor_extrinsic):
-        self.camera_virtual_to_sensor_extrinsic = virtual_to_sensor_extrinsic
+    def __init__(self):
+        pass
 
-    def generate_metadata_labels(self, frames_dir, annotated_poses_single_frameid, annotated_poses_single_frame, synchronized_poses):
+    @staticmethod
+    def generate_metadata_labels(scene_dir, annotated_poses_single_frameid, annotated_poses_single_frame, synchronized_poses):
+            
+        frames_dir = os.path.join(scene_dir, "data")
 
-        sensor_to_virtual_extrinsic = invert_affine(self.camera_virtual_to_sensor_extrinsic)
+        scene_metadata_file = os.path.join(scene_dir, "scene_meta.yaml")
+
+        with open(scene_metadata_file, 'r') as file:
+            scene_metadata = yaml.safe_load(file)
+
+        camera_name = scene_metadata["camera"]
+
+        camera_extrinsics = load_extrinsics(camera_name)
+
+        sensor_to_virtual_extrinsic = invert_affine(camera_extrinsics)
 
         #apply extrinsic to convert every pose to actual camera sensor pose
         synchronized_poses_corrected = {}
