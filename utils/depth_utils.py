@@ -1,4 +1,3 @@
-import normalSpeed
 from PIL import Image
 import os
 import numpy as np
@@ -35,11 +34,6 @@ def fill_missing(
 def norm2bgr(norm):
     norm = ((norm + 1.0) * 127).astype("uint8")
     return norm
-
-#depth should be in millimeters
-def compute_normals(depth, fx, fy, k_size=5, distance_threshold=2000, difference_threshold=20, point_into_surface=False):
-    normals = normalSpeed.depth_normal(depth, fx, fy, k_size, distance_threshold, difference_threshold, point_into_surface)
-    return normals
 
 def main():
     ycb_root = "datasets/ycb/YCB_Video_Dataset/"

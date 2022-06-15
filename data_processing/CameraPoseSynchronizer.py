@@ -66,7 +66,7 @@ class CameraPoseSynchronizer():
 
         #calculate virtual -> opti from ARUCO and extrinsic
 
-        camera_opti_calc = CameraOptiExtrinsicCalculator(None, None)
+        camera_opti_calc = CameraOptiExtrinsicCalculator()
         aruco_to_opti = camera_opti_calc.get_aruco_to_opti()
 
         dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
@@ -94,8 +94,7 @@ class CameraPoseSynchronizer():
                 aruco_to_sensor[3,3] = 1
                 sensor_to_aruco = np.linalg.inv(aruco_to_sensor) # sensor -> aruco 
                 sensor_to_opti = aruco_to_opti @ sensor_to_aruco # sensor -> opti
-                virtual_to_opti = sensor_to_opti
-                xyz_pos = virtual_to_opti[:3, -1]
+                xyz_pos = sensor_to_opti[:3, -1]
                 return xyz_pos
 
             else:

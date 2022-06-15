@@ -115,3 +115,7 @@ class AzureKinectDataCapturer():
 
         meta_file.close()
         data_file.close()
+
+        print("All data saved!")
+        print("Run process_data to perform synchronization and extract capture phase.")
+        print("Additionally, please fill scene_meta.yaml with the objects that are in this scene.")
