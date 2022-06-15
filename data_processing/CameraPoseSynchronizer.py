@@ -72,8 +72,6 @@ class CameraPoseSynchronizer():
         dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         parameters =  cv2.aruco.DetectorParameters_create()
 
-        ### matching frames using calibration phase ###
-
         def calculate_virtual_to_opti(row):
             
             color_image = load_bgr(raw_frames_dir, row["Frame"])
@@ -116,12 +114,10 @@ class CameraPoseSynchronizer():
 
         camera_calib_df = camera_calib_df[camera_calib_df["position_z"].apply(lambda x : x != 0)]
 
-        # clean azure kinect dataframe
         camera_calib_df['time_delta'] = (camera_calib_df["converted_camera_timestamp"] - camera_first_timestamp).dt.total_seconds()
 
         camera_calib_df['2d_distance'] = np.sqrt(camera_calib_df['position_x'].astype(float)** 2 + camera_calib_df['position_z'].astype(float) ** 2)
 
-        # clean original opti-track csv
         op_df = cleaned_opti_poses
 
         op_calib_df = op_df.iloc[:].copy()

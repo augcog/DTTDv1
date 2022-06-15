@@ -5,7 +5,6 @@ The output will be the object poses in the coordinate system of the camera senso
 """
 
 import argparse
-import numpy as np
 import yaml
 
 import os, sys 
@@ -15,7 +14,6 @@ sys.path.append(os.path.join(dir_path, ".."))
 from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from manual_pose_annotation.ManualPoseAnnotator import ManualPoseAnnotator
 from utils.object_utils import load_object_meshes
-from utils.frame_utils import load_rgb, load_depth
 from utils.pose_dataframe_utils import convert_pose_df_to_dict
 
 def main():

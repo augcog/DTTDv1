@@ -18,7 +18,6 @@ This code assumes you have run clean_camera_poses and synchronize_camera_poses a
 """
 
 import argparse
-import numpy as np
 
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))
