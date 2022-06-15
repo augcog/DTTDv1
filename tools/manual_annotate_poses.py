@@ -47,7 +47,11 @@ def main():
 
     #output to annotated_object_poses file
 
-    output_file = os.path.join(args.scene_dir, "annotated_object_poses", "annotated_object_poses.yaml")
+    annotated_object_poses_path = os.path.join(args.scene_dir, "annotated_object_poses")
+    if not os.path.isdir(annotated_object_poses_path):
+        os.mkdir(annotated_object_poses_path)
+
+    output_file = os.path.join(annotated_object_poses_path, "annotated_object_poses.yaml")
 
     annotated_object_poses_out = {}
     annotated_object_poses_out["frame"] = args.frame
