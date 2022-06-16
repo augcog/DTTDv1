@@ -22,3 +22,9 @@ def affine_matrix_from_rotvec_trans(rot_vec, trans):
     lrow = np.array([0,0,0,1])
     aff = np.vstack((aff, lrow))
     return aff
+
+def rotvec_trans_from_affine_matrix(aff):
+    rot_mat = aff[:3,:3]
+    trans = aff[:3,3]
+    rotvec = R.from_matrix(rot_mat).as_rotvec()
+    return rotvec, trans

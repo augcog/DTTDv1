@@ -13,6 +13,7 @@ Press (q) to quit.
 import cv2
 from datetime import datetime
 import numpy as np
+from pygame import mixer
 from pyk4a import PyK4A, CalibrationType
 import yaml
 
@@ -23,6 +24,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 from utils.frame_utils import write_bgr, write_depth
 
 CALIBRATION_KEY_START = 'c'
+CALIBRATION_KEY_END = 'p'
 CAPTURE_KEY_START = 'd'
 QUIT_KEY = 'q'
 
@@ -43,7 +45,7 @@ class AzureKinectDataCapturer():
     @staticmethod
     def collect_and_write_data(k4a, data_file, frame_id, frames_dir):
         capture = k4a.get_capture()
-        cur_timestamp = str(datetime.now())
+        cur_timestamp = capture.color_timestamp_usec / 1000000.
 
         color_image = capture.color[:,:,:3]
         depth_image = capture.transformed_depth
@@ -62,6 +64,7 @@ class AzureKinectDataCapturer():
 
         # state
         calibration_start_frame_id = -1
+        calibration_end_frame_id = -1
         capture_start_frame_id = -1
         frame_id = 0
 
@@ -74,9 +77,9 @@ class AzureKinectDataCapturer():
         data_file.write("Frame,Timestamp\n")
 
         meta_file = open(os.path.join(self.scene_dir, "camera_time_break.csv"), "w")
-        meta_file.write("Calibration Start ID,Capture Start ID\n")
+        meta_file.write("Calibration Start ID,Calibration End ID,Capture Start ID\n")
 
-        scene_meta_file = os.path.join(self.scene_dir, "scene_meta.yaml", "w")
+        scene_meta_file = os.path.join(self.scene_dir, "scene_meta.yaml")
         scene_meta = {}
         scene_meta['cam_scale'] = 0.001
         scene_meta['camera'] = self.camera_name
@@ -87,23 +90,40 @@ class AzureKinectDataCapturer():
         if not os.path.isdir(frames_dir):
             os.mkdir(frames_dir)
 
+        camera_poses_dir = os.path.join(self.scene_dir, "camera_poses")
+        if not os.path.isdir(camera_poses_dir):
+            os.mkdir(camera_poses_dir)
+
         cv2.namedWindow("Color Image", cv2.WINDOW_NORMAL)
         cv2.namedWindow("Depth Image", cv2.WINDOW_NORMAL)
+
+        #play sound when state transitions
+        mixer.init() 
+        sound_file = os.path.join(dir_path, "sound.mp3")
+        sound=mixer.Sound(sound_file)
 
         while True:
             if cv2.waitKey(1) == ord(CALIBRATION_KEY_START) and calibration_start_frame_id == -1: 
                 print("Calibration start frame_id is {}".format(frame_id))
+                sound.play()
                 calibration_start_frame_id = frame_id
-            elif cv2.waitKey(1) == ord(CAPTURE_KEY_START) and capture_start_frame_id == -1:
+            elif cv2.waitKey(1) == ord(CALIBRATION_KEY_END) and calibration_end_frame_id == -1:
                 if calibration_start_frame_id == -1:
+                    print("Please start calibration phase before ending it.")
+                    continue
+                print("Calibration end frame_id is {}".format(frame_id))
+                sound.play()
+                calibration_end_frame_id = frame_id
+            elif cv2.waitKey(1) == ord(CAPTURE_KEY_START) and capture_start_frame_id == -1:
+                if calibration_end_frame_id == -1:
                     print("Please perform a calibration phase prior to capturing data")
                     continue
-                else:
-                    print("Capturing start img_id is {}".format(frame_id))
-                    capture_start_frame_id = frame_id
+                print("Capturing start img_id is {}".format(frame_id))
+                sound.play()
+                capture_start_frame_id = frame_id
             elif cv2.waitKey(1) == ord(QUIT_KEY):
                 print("Finished Capture")
-                if calibration_start_frame_id == -1 or capture_start_frame_id == -1:
+                if calibration_start_frame_id == -1 or calibration_end_frame_id == -1 or capture_start_frame_id == -1:
                     print("Warning!! Didn't perform a calibration and capture phase.")
                 break
 
@@ -111,7 +131,7 @@ class AzureKinectDataCapturer():
                 self.collect_and_write_data(k4a, data_file, frame_id, frames_dir)
                 frame_id += 1
 
-        meta_file.write("{0},{1}\n".format(calibration_start_frame_id, capture_start_frame_id))
+        meta_file.write("{0},{1},{2}\n".format(calibration_start_frame_id, calibration_end_frame_id, capture_start_frame_id))
 
         meta_file.close()
         data_file.close()

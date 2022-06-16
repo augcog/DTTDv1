@@ -9,6 +9,7 @@ import cv2
 import open3d as o3d
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+from tqdm import tqdm
 import yaml
 
 import os, sys
@@ -17,11 +18,12 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
 from utils.camera_utils import load_extrinsics, load_intrinsics, load_distortion
-from utils.frame_utils import load_rgb, write_debug_label, write_label, write_debug_rgb
+from utils.frame_utils import load_bgr, load_rgb, load_depth, write_debug_label, write_label, write_debug_rgb
 from utils.mesh_utils import uniformly_sample_mesh_with_textures_as_colors
+from utils.pointcloud_utils import pointcloud_from_rgb_depth
 
 class SemanticLabelingGenerator():
-    def __init__(self, objects, number_of_points=1000000):
+    def __init__(self, objects, number_of_points=10000):
         self._objects = {}
         for obj_id, obj_data in objects.items():
             obj_pcld = uniformly_sample_mesh_with_textures_as_colors(obj_data["mesh"], obj_data["texture"], number_of_points)
@@ -60,16 +62,16 @@ class SemanticLabelingGenerator():
             obj_pcld = obj_pcld.transform(annotated_obj_pose)
             object_pcld_transformed[obj_id] = obj_pcld
 
-        rgb = load_rgb(frames_dir, annotated_poses_single_frameid)
-        h, w, _ = rgb.shape
         
         #use first frame coordinate system as world coordinates
-        for frame_id, sensor_pose in synchronized_poses_corrected.items():
+        for frame_id, sensor_pose in tqdm(synchronized_poses_corrected.items(), total=len(synchronized_poses_corrected)):
+            rgb = load_rgb(frames_dir, frame_id)
+            h, w, _ = rgb.shape
 
             sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ sensor_pose
             sensor_pose_in_annotated_coordinates_inv = invert_affine(sensor_pose_in_annotated_coordinates)
-            sensor_rot = sensor_pose_in_annotated_coordinates[:3,:3]
-            sensor_trans = sensor_pose_in_annotated_coordinates[:3,3]
+            sensor_rot = sensor_pose_in_annotated_coordinates_inv[:3,:3]
+            sensor_trans = sensor_pose_in_annotated_coordinates_inv[:3,3]
             sensor_rvec = R.from_matrix(sensor_rot).as_rotvec()
 
             #fill these, then argmin over the depth
@@ -82,13 +84,21 @@ class SemanticLabelingGenerator():
                 for obj_id, obj_pcld in self._objects.items():
                     object_colors[obj_id] = (np.array(obj_pcld.colors) * 255).astype(np.uint8)
 
+            bgr = load_bgr(frames_dir, frame_id)
+
             for idx, (obj_id, obj_pcld) in enumerate(object_pcld_transformed.items()):
 
                 obj_pts = np.array(obj_pcld.points)
 
+                #(Nx2)
                 obj_pts_projected, _ = cv2.projectPoints(obj_pts, sensor_rvec, sensor_trans, camera_intrinsics, camera_distortion)
-                obj_pts_projected = obj_pts_projected.squeeze(1) #(Nx2)
-                obj_pts_projected = np.round(obj_pts_projected).astype(np.int)
+                obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
+
+                for pt_x, pt_y in obj_pts_projected:
+                    bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 4, color=(255,255,255), thickness=-1)
+                
+                cv2.imshow("test", bgr)
+                cv2.waitKey(5)
 
                 mask1 = obj_pts_projected[:,0] >= 0
                 mask2 = obj_pts_projected[:,0] < w
@@ -100,7 +110,12 @@ class SemanticLabelingGenerator():
                 obj_pcld = o3d.geometry.PointCloud(obj_pcld) #copy constructor
 
                 obj_pcld = obj_pcld.transform(sensor_pose_in_annotated_coordinates_inv)
-                
+
+                # #TEST STUFF
+                # depth = load_depth(frames_dir, frame_id)
+                # camera_pcld_frame = pointcloud_from_rgb_depth(rgb, depth, 0.001, camera_intrinsics, camera_distortion, prune_zero=True)
+                # o3d.io.write_point_cloud("{0}_camera.ply".format(frame_id), camera_pcld_frame)
+                # o3d.io.write_point_cloud("{0}_object.ply".format(frame_id), obj_pcld)
                 
                 obj_pts_in_sensor_coordinates = np.array(obj_pcld.points)
 
