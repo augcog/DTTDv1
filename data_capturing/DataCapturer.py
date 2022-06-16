@@ -127,7 +127,7 @@ class AzureKinectDataCapturer():
                     print("Warning!! Didn't perform a calibration and capture phase.")
                 break
 
-            if calibration_start_frame_id > -1:
+            if (calibration_start_frame_id > -1 and calibration_end_frame_id == -1) or capture_start_frame_id > -1:
                 self.collect_and_write_data(k4a, data_file, frame_id, frames_dir)
                 frame_id += 1
 

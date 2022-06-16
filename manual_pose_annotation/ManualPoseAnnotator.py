@@ -190,7 +190,7 @@ class ManualPoseAnnotator:
             sdf_trunc=sdf_trunc,
             color_type=o3d.integration.TSDFVolumeColorType.RGB8)
 
-        for frame_id in range(10):
+        for frame_id in range(50):
             rgb = load_o3d_rgb(frames_dir, frame_id)
             depth = load_o3d_depth(frames_dir, frame_id)
             rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(

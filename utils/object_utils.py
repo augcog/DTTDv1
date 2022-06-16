@@ -38,4 +38,3 @@ def load_object_meshes(object_ids):
         object_meshes[object_id] = {'name': object_name, 'texture': tex_rgb, 'mesh': obj_mesh}
 
     return object_meshes
-    

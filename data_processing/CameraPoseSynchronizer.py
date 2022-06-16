@@ -247,12 +247,10 @@ class CameraPoseSynchronizer():
         
         synced_df_renumbered = synced_df.copy()
 
-        first_frame = synced_df_renumbered['Frame'].iloc[0]
-        synced_df_renumbered["New_Frame"] = synced_df_renumbered['Frame'] - first_frame
+        new_frame_id = 0
 
-        for _, row in tqdm(synced_df_renumbered.iterrows(), total=synced_df_renumbered.shape[0]):
+        for _, row in tqdm(synced_df_renumbered.iterrows(), total=synced_df_renumbered.shape[0], desc="Writing Renumbered Frames"):
             old_frame_id = int(row["Frame"])
-            new_frame_id = int(row["New_Frame"])
 
             bgr = load_bgr(raw_frames_dir, old_frame_id)
             depth = load_depth(raw_frames_dir, old_frame_id)
@@ -260,8 +258,11 @@ class CameraPoseSynchronizer():
             write_bgr(output_frames_dir, new_frame_id, bgr)
             write_depth(output_frames_dir, new_frame_id, depth)
 
-        synced_df_renumbered["Frame"] = synced_df_renumbered["New_Frame"]
-        synced_df_renumbered.drop("New_Frame", axis=1, inplace=True)
+            new_frame_id += 1
+
+        new_frame_ids = np.arange(new_frame_id)
+
+        synced_df_renumbered["Frame"] = new_frame_ids
 
         synced_df_renumbered.to_csv(output_sync)
 

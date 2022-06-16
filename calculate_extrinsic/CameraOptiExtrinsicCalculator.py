@@ -107,7 +107,7 @@ class CameraOptiExtrinsicCalculator():
         translation_diffs_filtered = []
         for x in range(len(extrinsics) - 1):
 
-            if x > 15:
+            if x > 6:
                 break
 
             rotation_diff = np.linalg.norm(extrinsics[x + 1][:3,:3] - extrinsics[x][:3,:3])
@@ -118,7 +118,7 @@ class CameraOptiExtrinsicCalculator():
                 rotation_diffs.append(rotation_diff)
                 translation_diffs.append(translation_diff)
             else:
-                extrinsics_filtered = extrinsics
+                extrinsics_filtered.append(extrinsics[x])
                 rotation_diffs_filtered.append(rotation_diff)
                 translation_diffs_filtered.append(translation_diff)
 
@@ -131,7 +131,7 @@ class CameraOptiExtrinsicCalculator():
         print("rotation diffs (min, max, mean)", np.min(rotation_diffs_filtered), np.max(rotation_diffs_filtered), np.mean(rotation_diffs_filtered))
         print("translation diffs (min, max, mean)", np.min(translation_diffs_filtered), np.max(translation_diffs_filtered), np.mean(translation_diffs_filtered))
 
-        extrinsics = extrinsics_filtered
+        extrinsics = np.array(extrinsics_filtered)
         print("Remaining extrinsics: {0}".format(len(extrinsics)))
 
         #return average extrinsic
