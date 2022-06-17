@@ -11,32 +11,32 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
+from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from scene_labeling_generation.MetadataGenerator import MetadataGenerator
 from scene_labeling_generation.SemanticLabelingGenerator import SemanticLabelingGenerator
+from utils.constants import SCENES_DIR
 from utils.object_utils import load_object_meshes
+from utils.pose_dataframe_utils import convert_pose_df_to_dict
 
 def main():
     parser = argparse.ArgumentParser(description='Generate semantic labeling and meta labeling')
-    parser.add_argument('scene_dir', type=str, help='scene directory (contains scene_meta.yaml and data (frames) and camera_poses)')
-    parser.add_argument('--camera_intrinsic_matrix_file', type=str, default="camera/intrinsic.txt")
-    parser.add_argument('--camera_distortion_coeff_file', type=str, default="camera/distortion.txt")
-    parser.add_argument('--camera_extrinsic_file', type=str, default="camera/extrinsic.txt")
+    parser.add_argument('scene_name', type=str, help='scene directory (contains scene_meta.yaml and data (frames) and camera_poses)')
+    parser.add_argument('--refine', type=bool, default=True, help="perform scene pose refinement using icp")
 
     args = parser.parse_args()
 
-    camera_intrinsic_matrix = np.loadtxt(args.camera_intrinsic_matrix_file)
-    camera_distortion_coeffs = np.loadtxt(args.camera_distortion_coeff_file)
-    camera_extrinsic = np.loadtxt(args.camera_extrinsic_file)
+    scene_dir = os.path.join(SCENES_DIR, args.scene_name)
 
-    scene_metadata_file = os.path.join(args.scene_dir, "scene_meta.yaml")
+    scene_metadata_file = os.path.join(scene_dir, "scene_meta.yaml")
     with open(scene_metadata_file, 'r') as file:
         scene_metadata = yaml.safe_load(file)
     
     objects = load_object_meshes(scene_metadata["objects"])
 
-    frames_dir = os.path.join(args.scene_dir, "data")
+    if args.refine and len(objects) == 1:
+        print("WARNING!, ICP refinement with only 1 object is dangerous. May result in bad ICP result.")
 
-    annotated_poses_csv = os.path.join(args.scene_dir, "annotated_object_poses", "annotated_object_poses.yaml")
+    annotated_poses_csv = os.path.join(scene_dir, "annotated_object_poses", "annotated_object_poses.yaml")
     with open(annotated_poses_csv, "r") as file:
         annotated_poses_data = yaml.safe_load(file)
 
@@ -44,17 +44,23 @@ def main():
     annotated_poses = annotated_poses_data["object_poses"]
     annotated_poses = {k: np.array(v) for k, v in annotated_poses.items()}
 
-    #TEST DATA.
-    synchronized_poses = {0: np.eye(4), 1: np.eye(4)}
-    synchronized_poses[1][:3,3] += np.array([0.3, 0, 0])
+    cam_pose_sync = CameraPoseSynchronizer()
+    synchronized_poses_csv = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized.csv")
+    synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
+    synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
 
     #generate labels
-    semantic_labeling_generator = SemanticLabelingGenerator(objects, camera_intrinsic_matrix, camera_distortion_coeffs, camera_extrinsic)
-    semantic_labeling_generator.generate_semantic_labels(frames_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, debug=True)
+    semantic_labeling_generator = SemanticLabelingGenerator(objects)
+    semantic_labeling_generator.generate_semantic_labels(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, debug=True, refine_poses=args.refine)
+
+    if args.refine:
+        synchronized_poses_csv = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized_refined.csv")
+        synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
+        synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
 
     #metadata labeling requires semantic labeling
-    metadata_labeling_generator = MetadataGenerator(camera_extrinsic)
-    metadata_labeling_generator.generate_metadata_labels(frames_dir, annotated_poses_frameid, annotated_poses, synchronized_poses)
+    metadata_labeling_generator = MetadataGenerator()
+    metadata_labeling_generator.generate_metadata_labels(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses)
 
 if __name__ == "__main__":
     main()

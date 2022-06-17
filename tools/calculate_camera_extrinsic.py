@@ -18,45 +18,41 @@ This code assumes you have run clean_camera_poses and synchronize_camera_poses a
 """
 
 import argparse
-import numpy as np
 
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from camera.calculate_extrinsic.CameraOptiExtrinsicCalculator import CameraOptiExtrinsicCalculator
-from camera_pose_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
+from calculate_extrinsic.CameraOptiExtrinsicCalculator import CameraOptiExtrinsicCalculator
+from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
+from utils.constants import EXTRINSICS_DIR
+from utils.datetime_utils import get_latest_str_from_str_time_list
 from utils.pose_dataframe_utils import convert_pose_df_to_dict
 
 def main():
 
     parser = argparse.ArgumentParser(description='Compute virtual optitrack camera to camera sensor extrinsic.')
-    parser.add_argument('scene_dir', type=str, help='scene directory (contains scene_meta.yaml and data (frames) and camera_poses)')
-    parser.add_argument('--camera_intrinsic_matrix_file', type=str, default="camera/intrinsic.txt")
-    parser.add_argument('--camera_distortion_coeff_file', type=str, default="camera/distortion.txt")
-    parser.add_argument('--output', type=str, default="camera/extrinsic.txt")
+    parser.add_argument('--extrinsic_scene_name', default='', type=str, help='Which scene to use to calculate extrinsic. Else, uses latest extrinsic scene in extrinsics dir')
 
     args = parser.parse_args()
 
-    camera_intrinsic_matrix = np.loadtxt(args.camera_intrinsic_matrix_file)
-    camera_distortion_coeffs = np.loadtxt(args.camera_distortion_coeff_file)
+    cam_opti_extr_calc = CameraOptiExtrinsicCalculator()
 
-    cam_opti_extr_calc = CameraOptiExtrinsicCalculator(camera_intrinsic_matrix, camera_distortion_coeffs)
+    if args.extrinsic_scene_name:
+        scene_dir = os.path.join(EXTRINSICS_DIR, args.extrinsic_scene_name)
+    else:
+        extrinsic_scenes = list(os.listdir(EXTRINSICS_DIR))
+        latest_extrinsic_scene = get_latest_str_from_str_time_list(extrinsic_scenes)
+        scene_dir = os.path.join(EXTRINSICS_DIR, latest_extrinsic_scene)
 
     cam_pose_sync = CameraPoseSynchronizer()
-    synchronized_poses_csv = os.path.join(args.scene_dir, "camera_poses", "synchronized_camera_poses.csv")
+    synchronized_poses_csv = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized.csv")
     synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
     synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
-
-    frames_dir = os.path.join(args.scene_dir, "data")
     
-    extrinsic = cam_opti_extr_calc.calculate_extrinsic(frames_dir, synchronized_poses)
+    extrinsic = cam_opti_extr_calc.calculate_extrinsic(scene_dir, synchronized_poses, write_to_file=True)
 
     print("computed extrinsic:", extrinsic)
     
-    if args.output:
-        print("saving extrinsic to file {0}".format(args.output))
-        np.savetxt(args.output, extrinsic)
-
 if __name__ == "__main__":
     main()

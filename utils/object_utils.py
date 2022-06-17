@@ -35,7 +35,7 @@ def load_object_meshes(object_ids):
         obj_mesh = convert_mesh_uvs_to_colors(obj_mesh)
         tex_path = os.path.join(object_dir, object_name, "texture_map.png")
         tex_rgb = np.asarray(Image.open(tex_path))
+        tex_rgb = tex_rgb[:,:,:3]
         object_meshes[object_id] = {'name': object_name, 'texture': tex_rgb, 'mesh': obj_mesh}
 
     return object_meshes
-    
