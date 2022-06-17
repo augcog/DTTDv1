@@ -21,6 +21,7 @@ from utils.pose_dataframe_utils import convert_pose_df_to_dict
 def main():
     parser = argparse.ArgumentParser(description='Generate semantic labeling and meta labeling')
     parser.add_argument('scene_name', type=str, help='scene directory (contains scene_meta.yaml and data (frames) and camera_poses)')
+    parser.add_argument('--refine', type=bool, default=True, help="perform scene pose refinement using icp")
 
     args = parser.parse_args()
 
@@ -31,6 +32,9 @@ def main():
         scene_metadata = yaml.safe_load(file)
     
     objects = load_object_meshes(scene_metadata["objects"])
+
+    if args.refine and len(objects) == 1:
+        print("WARNING!, ICP refinement with only 1 object is dangerous. May result in bad ICP result.")
 
     annotated_poses_csv = os.path.join(scene_dir, "annotated_object_poses", "annotated_object_poses.yaml")
     with open(annotated_poses_csv, "r") as file:
@@ -47,7 +51,12 @@ def main():
 
     #generate labels
     semantic_labeling_generator = SemanticLabelingGenerator(objects)
-    semantic_labeling_generator.generate_semantic_labels(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, debug=True)
+    semantic_labeling_generator.generate_semantic_labels(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, debug=True, refine_poses=args.refine)
+
+    if args.refine:
+        synchronized_poses_csv = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized_refined.csv")
+        synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
+        synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
 
     #metadata labeling requires semantic labeling
     metadata_labeling_generator = MetadataGenerator()

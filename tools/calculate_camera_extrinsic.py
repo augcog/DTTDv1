@@ -26,26 +26,24 @@ sys.path.append(os.path.join(dir_path, ".."))
 from calculate_extrinsic.CameraOptiExtrinsicCalculator import CameraOptiExtrinsicCalculator
 from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from utils.constants import EXTRINSICS_DIR
-from utils.datetime_utils import time_of_str
+from utils.datetime_utils import get_latest_str_from_str_time_list
 from utils.pose_dataframe_utils import convert_pose_df_to_dict
 
 def main():
 
     parser = argparse.ArgumentParser(description='Compute virtual optitrack camera to camera sensor extrinsic.')
-    parser.add_argument('--extrinsics_scene_name', default='', type=str, help='Which scene to use to calculate extrinsic. Else, uses latest extrinsic scene in extrinsics dir')
+    parser.add_argument('--extrinsic_scene_name', default='', type=str, help='Which scene to use to calculate extrinsic. Else, uses latest extrinsic scene in extrinsics dir')
 
     args = parser.parse_args()
 
     cam_opti_extr_calc = CameraOptiExtrinsicCalculator()
 
-    if args.extrinsics_scene_name:
-        scene_dir = os.path.join(EXTRINSICS_DIR, args.extrinsics_scene_name)
+    if args.extrinsic_scene_name:
+        scene_dir = os.path.join(EXTRINSICS_DIR, args.extrinsic_scene_name)
     else:
         extrinsic_scenes = list(os.listdir(EXTRINSICS_DIR))
-        extrinsic_scenes = [time_of_str(s) for s in extrinsic_scenes]
-        extrinsic_scenes.sort()
-        scene_dir = os.path.join(EXTRINSICS_DIR, extrinsic_scenes[-1])
-
+        latest_extrinsic_scene = get_latest_str_from_str_time_list(extrinsic_scenes)
+        scene_dir = os.path.join(EXTRINSICS_DIR, latest_extrinsic_scene)
 
     cam_pose_sync = CameraPoseSynchronizer()
     synchronized_poses_csv = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized.csv")

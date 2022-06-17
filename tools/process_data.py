@@ -17,7 +17,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 from data_processing.CameraPoseCleaner import CameraPoseCleaner
 from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from utils.constants import EXTRINSICS_DIR, SCENES_DIR
-from utils.datetime_utils import time_of_str
+from utils.datetime_utils import get_latest_str_from_str_time_list
 
 def main():
     parser = argparse.ArgumentParser(description='Synchronize optitrack poses with frames')
@@ -33,9 +33,8 @@ def main():
         scene_dir = os.path.join(EXTRINSICS_DIR, args.scene_name)
     elif args.extrinsic:
         extrinsic_scenes = list(os.listdir(EXTRINSICS_DIR))
-        extrinsic_scenes = [time_of_str(s) for s in extrinsic_scenes]
-        extrinsic_scenes.sort()
-        scene_dir = os.path.join(EXTRINSICS_DIR, extrinsic_scenes[-1])
+        latest_extrinsic_scene = get_latest_str_from_str_time_list(extrinsic_scenes)
+        scene_dir = os.path.join(EXTRINSICS_DIR, latest_extrinsic_scene)
     else:
         scene_dir = os.path.join(SCENES_DIR, args.scene_name)
 

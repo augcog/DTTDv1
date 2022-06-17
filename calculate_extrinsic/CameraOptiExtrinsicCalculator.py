@@ -97,7 +97,9 @@ class CameraOptiExtrinsicCalculator():
 
         extrinsics = np.array(extrinsics)
 
-        extrinsics_filtered = []
+        #Assumption, Extrinsic 0 is mostly correct (please verify)
+        #If Extrinsic 0 has swapped axis problem, then this will fail
+        extrinsics_filtered = [extrinsics[0]]
 
         #make sure the extrinsics are relatively similar
         rotation_diffs = []
@@ -105,22 +107,21 @@ class CameraOptiExtrinsicCalculator():
 
         rotation_diffs_filtered = []
         translation_diffs_filtered = []
-        for x in range(len(extrinsics) - 1):
 
-            if x > 6:
-                break
+        for x in range(1, len(extrinsics)):
 
-            rotation_diff = np.linalg.norm(extrinsics[x + 1][:3,:3] - extrinsics[x][:3,:3])
-            translation_diff = np.linalg.norm(extrinsics[x + 1][:3,3] - extrinsics[x][:3,3])
+            rotation_diff = np.linalg.norm(extrinsics[x][:3,:3] - extrinsics_filtered[-1][:3,:3])
+            translation_diff = np.linalg.norm(extrinsics[x][:3,3] - extrinsics_filtered[-1][:3,3])
 
-            if rotation_diff > 0.1 or translation_diff > 0.05:
+            if rotation_diff > 0.2 or translation_diff > 0.05:
                 print("skipping extrinsic {0} since too much diff".format(x))
-                rotation_diffs.append(rotation_diff)
-                translation_diffs.append(translation_diff)
             else:
                 extrinsics_filtered.append(extrinsics[x])
                 rotation_diffs_filtered.append(rotation_diff)
                 translation_diffs_filtered.append(translation_diff)
+
+            rotation_diffs.append(rotation_diff)
+            translation_diffs.append(translation_diff)
 
         if len(rotation_diffs) > 0:
             print("Diffs before filtering")

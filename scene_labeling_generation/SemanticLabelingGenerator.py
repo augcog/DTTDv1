@@ -13,11 +13,14 @@ from tqdm import tqdm
 import yaml
 
 import os, sys
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
+from scene_labeling_generation.ScenePoseRefiner import ScenePoseRefiner
 from utils.affine_utils import invert_affine
 from utils.camera_utils import load_extrinsics, load_intrinsics, load_distortion
+from utils.pose_dataframe_utils import convert_pose_dict_to_df
 from utils.frame_utils import load_bgr, load_rgb, load_depth, write_debug_label, write_label, write_debug_rgb
 from utils.mesh_utils import uniformly_sample_mesh_with_textures_as_colors
 from utils.pointcloud_utils import pointcloud_from_rgb_depth
@@ -31,7 +34,7 @@ class SemanticLabelingGenerator():
         
         self.number_of_points = number_of_points
 
-    def generate_semantic_labels(self, scene_dir, annotated_poses_single_frameid, annotated_poses_single_frame, synchronized_poses, debug=False):
+    def generate_semantic_labels(self, scene_dir, annotated_poses_single_frameid, annotated_poses_single_frame, synchronized_poses, debug=False, refine_poses=True):
 
         frames_dir = os.path.join(scene_dir, "data")
 
@@ -45,6 +48,8 @@ class SemanticLabelingGenerator():
         camera_intrinsics = load_intrinsics(camera_name)
         camera_distortion = load_distortion(camera_name)
         camera_extrinsics = load_extrinsics(camera_name)
+
+        cam_scale = scene_metadata["cam_scale"]
 
         sensor_to_virtual_extrinsic = invert_affine(camera_extrinsics)
 
@@ -62,17 +67,19 @@ class SemanticLabelingGenerator():
             obj_pcld = obj_pcld.transform(annotated_obj_pose)
             object_pcld_transformed[obj_id] = obj_pcld
 
+        if refine_poses:
+            scene_pose_refiner = ScenePoseRefiner()
+            synchronized_poses_refined = {}
         
         #use first frame coordinate system as world coordinates
         for frame_id, sensor_pose in tqdm(synchronized_poses_corrected.items(), total=len(synchronized_poses_corrected)):
+
             rgb = load_rgb(frames_dir, frame_id)
+            depth = load_depth(frames_dir, frame_id)
             h, w, _ = rgb.shape
 
             sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ sensor_pose
             sensor_pose_in_annotated_coordinates_inv = invert_affine(sensor_pose_in_annotated_coordinates)
-            sensor_rot = sensor_pose_in_annotated_coordinates_inv[:3,:3]
-            sensor_trans = sensor_pose_in_annotated_coordinates_inv[:3,3]
-            sensor_rvec = R.from_matrix(sensor_rot).as_rotvec()
 
             #fill these, then argmin over the depth
             label_out = np.zeros((h, w, len(object_pcld_transformed))).astype(np.uint16)
@@ -85,6 +92,28 @@ class SemanticLabelingGenerator():
                     object_colors[obj_id] = (np.array(obj_pcld.colors) * 255).astype(np.uint8)
 
             bgr = load_bgr(frames_dir, frame_id)
+
+            # First, refine pose
+            objects_in_sensor_coords = []
+
+            for idx, (obj_id, obj_pcld) in enumerate(object_pcld_transformed.items()):
+                obj_pcld = o3d.geometry.PointCloud(obj_pcld) #copy constructor
+                obj_pcld = obj_pcld.transform(sensor_pose_in_annotated_coordinates_inv)
+                objects_in_sensor_coords.append(obj_pcld)
+            
+            if refine_poses:
+                camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics, camera_distortion)
+
+                pose_refinement = scene_pose_refiner.refine_pose(objects_in_sensor_coords, camera_pcld)
+
+                sensor_pose_in_annotated_coordinates = pose_refinement @ sensor_pose_in_annotated_coordinates
+                sensor_pose_in_annotated_coordinates_inv = invert_affine(sensor_pose_in_annotated_coordinates)
+
+                synchronized_poses_refined[frame_id] = sensor_pose_annotated_frame @ sensor_pose_in_annotated_coordinates
+
+            sensor_rot = sensor_pose_in_annotated_coordinates_inv[:3,:3]
+            sensor_trans = sensor_pose_in_annotated_coordinates_inv[:3,3]
+            sensor_rvec = R.from_matrix(sensor_rot).as_rotvec()
 
             for idx, (obj_id, obj_pcld) in enumerate(object_pcld_transformed.items()):
 
@@ -107,15 +136,7 @@ class SemanticLabelingGenerator():
 
                 mask = mask1 * mask2 * mask3 * mask4
 
-                obj_pcld = o3d.geometry.PointCloud(obj_pcld) #copy constructor
-
-                obj_pcld = obj_pcld.transform(sensor_pose_in_annotated_coordinates_inv)
-
-                # #TEST STUFF
-                # depth = load_depth(frames_dir, frame_id)
-                # camera_pcld_frame = pointcloud_from_rgb_depth(rgb, depth, 0.001, camera_intrinsics, camera_distortion, prune_zero=True)
-                # o3d.io.write_point_cloud("{0}_camera.ply".format(frame_id), camera_pcld_frame)
-                # o3d.io.write_point_cloud("{0}_object.ply".format(frame_id), obj_pcld)
+                obj_pcld = objects_in_sensor_coords[idx]
                 
                 obj_pts_in_sensor_coordinates = np.array(obj_pcld.points)
 
@@ -183,3 +204,7 @@ class SemanticLabelingGenerator():
 
             if debug:
                 write_debug_label(frames_dir, frame_id, label_out * 10000)
+
+        if refine_poses:
+            synchronized_poses_refined_df = convert_pose_dict_to_df(synchronized_poses_refined)
+            scene_pose_refiner.save_refined_poses_df(scene_dir, synchronized_poses_refined_df)

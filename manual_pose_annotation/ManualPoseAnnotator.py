@@ -97,10 +97,10 @@ class ManualPoseAnnotator:
                 target_pcld, camera_pcld, .02, trans_init,
                 o3d.registration.TransformationEstimationPointToPoint())
 
+            transform_obj_to_scene = transform_obj_to_scene.transformation
+            
             print("icp result for obj {0}".format(obj_id))
             print(transform_obj_to_scene)
-
-            transform_obj_to_scene = transform_obj_to_scene.transformation
 
             object_pose_initializations[obj_id] = transform_obj_to_scene
 
@@ -154,6 +154,8 @@ class ManualPoseAnnotator:
         depth = load_depth(frames_dir, frameid)
         h, w, _ = rgb.shape
 
+        camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
+
         if initialization_method:
             initial_poses = initialization_method(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients, self._objects)
         else:
@@ -199,6 +201,9 @@ class ManualPoseAnnotator:
             volume.integrate(rgbd_image, intr, extr)
 
         camera_recon = volume.extract_triangle_mesh()
+
+        camera_representation_switch = 0
+        camera_representations = [camera_pcld, camera_recon]
             
         vis = o3d.visualization.VisualizerWithKeyCallback()
         vis.create_window()
@@ -209,7 +214,7 @@ class ManualPoseAnnotator:
         view_control = vis.get_view_control()
 
         #add camera pointcloud
-        vis.add_geometry(camera_recon)
+        vis.add_geometry(camera_pcld)
 
         #State
         annotated_poses = initial_poses
@@ -260,6 +265,19 @@ class ManualPoseAnnotator:
             return True
 
         vis.register_key_callback(ord("2"), partial(toggle_object_visibilities))
+
+#------------------------------------------------------------------------------------------
+        #PRESS 3 to toggle camera pointcloud or 3d reconstruction
+        def toggle_scene_representation(vis):
+
+            nonlocal camera_representation_switch
+
+            vis.remove_geometry(camera_representations[camera_representation_switch], reset_bounding_box=False)
+            camera_representation_switch = 1 - camera_representation_switch
+            vis.add_geometry(camera_representations[camera_representation_switch], reset_bounding_box=False)
+            return True
+
+        vis.register_key_callback(ord("3"), partial(toggle_scene_representation))
 
 #------------------------------------------------------------------------------------------
 
