@@ -29,7 +29,7 @@ class ScenePoseRefiner():
         criteria.max_iteration = 4
 
         pose_correction = o3d.registration.registration_icp(
-            all_object_pcld, camera_pcld, .005, trans_init,
+            all_object_pcld, camera_pcld, .007, trans_init,
             o3d.registration.TransformationEstimationPointToPoint(),
             criteria)
 
