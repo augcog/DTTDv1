@@ -20,7 +20,7 @@ class CameraOptiExtrinsicCalculator():
 
     @staticmethod
     def calculate_aruco_to_opti_transform(aruco_to_opti_translation):
-        aruco_to_opti_rot = np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]]) #aruco -> opti (rot (3x3))
+        aruco_to_opti_rot = np.array([[0, -1, 0], [0, 0, 1], [-1, 0, 0]]) #aruco -> opti (rot (3x3))
 
         aruco_to_opti = np.eye(4)
         aruco_to_opti[:3,:3] = aruco_to_opti_rot
@@ -30,12 +30,9 @@ class CameraOptiExtrinsicCalculator():
 
     @staticmethod
     def calculate_camera_to_opti_transform(rot_vec, trans, aruco_to_opti_translation):
-
         aff = affine_matrix_from_rotvec_trans(rot_vec, trans) #aruco -> camera
         aruco_to_opti = CameraOptiExtrinsicCalculator.calculate_aruco_to_opti_transform(aruco_to_opti_translation)
-
         opti_to_aruco = invert_affine(aruco_to_opti)
-
         affine_transform_opti = np.matmul(aff, opti_to_aruco) #1. opti -> aruco 2. aruco -> camera = opti -> camera
         return invert_affine(affine_transform_opti) #camera -> opti
 
