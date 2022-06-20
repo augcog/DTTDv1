@@ -5,6 +5,7 @@ Cleans the exported tracking data output of the OptiTrack
 import csv
 import os
 import pandas as pd
+import yaml
 
 class CameraPoseCleaner():
     def __init__(self):
@@ -20,6 +21,13 @@ class CameraPoseCleaner():
 
         camera_pose_path = os.path.join(scene_dir, "camera_poses", "camera_poses.csv")
         camera_pose_cleaned_path = os.path.join(scene_dir, "camera_poses", "camera_poses_cleaned.csv")
+
+        scene_metadata_file = os.path.join(scene_dir, "scene_meta.yaml")
+
+        with open(scene_metadata_file, 'r') as file:
+            scene_metadata = yaml.safe_load(file)
+
+        camera_name = scene_metadata["camera"]
 
         header_rows = []
         rows = []
@@ -44,8 +52,9 @@ class CameraPoseCleaner():
         headers = headers[:first_marker_column]
         rows = [row[:first_marker_column] for row in rows]
 
+        headers = [h.replace(camera_name, "camera") for h in headers]
+
         df = pd.DataFrame(rows, columns=headers)
-        df = df.dropna()
 
         if write_cleaned_to_file:
             df.to_csv(camera_pose_cleaned_path)

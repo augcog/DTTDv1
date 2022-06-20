@@ -46,13 +46,13 @@ class CameraPoseSynchronizer():
         camera_name = scene_metadata["camera"]
         cam_scale = scene_metadata["cam_scale"]
         
-        rotation_x_key = '{0}_Rotation_X'.format(camera_name)
-        rotation_y_key = '{0}_Rotation_Y'.format(camera_name)
-        rotation_z_key = '{0}_Rotation_Z'.format(camera_name)
-        rotation_w_key = '{0}_Rotation_W'.format(camera_name)
-        position_x_key = '{0}_Position_X'.format(camera_name)
-        position_y_key = '{0}_Position_Y'.format(camera_name)
-        position_z_key = '{0}_Position_Z'.format(camera_name)
+        rotation_x_key = 'camera_Rotation_X'
+        rotation_y_key = 'camera_Rotation_Y'
+        rotation_z_key = 'camera_Rotation_Z'
+        rotation_w_key = 'camera_Rotation_W'
+        position_x_key = 'camera_Position_X'
+        position_y_key = 'camera_Position_Y'
+        position_z_key = 'camera_Position_Z'
 
         camera_intrinsics = load_intrinsics(camera_name)
         camera_distortion = load_distortion(camera_name)

@@ -10,12 +10,13 @@ Fully generates scene directory:
 
 import argparse
 
-import os, sys 
+import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from data_processing.CameraPoseCleaner import CameraPoseCleaner
 from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
+from pose_refinement.OptiKFSmoother import OptiKFSmoother
 from utils.constants import EXTRINSICS_DIR, SCENES_DIR
 from utils.datetime_utils import get_latest_str_from_str_time_list
 
@@ -44,8 +45,17 @@ def main():
     cam_pose_cleaner = CameraPoseCleaner()
     cleaned_poses = cam_pose_cleaner.clean_camera_pose_file(scene_dir, write_cleaned_to_file=True)
 
+    print("Poses cleaned!")
+
+    cam_pose_smoother = OptiKFSmoother()
+    smoothed_poses = cam_pose_smoother.smooth_opti_poses_kf(scene_dir, cleaned_poses, write_smoothed_to_file=True)
+
+    print("Poses smoothed!")
+
     cam_pose_synchronizer = CameraPoseSynchronizer()
-    cam_pose_synchronizer.synchronize_camera_poses_and_frames(scene_dir, cleaned_poses, write_to_file=True)
+    cam_pose_synchronizer.synchronize_camera_poses_and_frames(scene_dir, smoothed_poses, write_to_file=True)
+
+    print("Poses synchronized!")
 
 if __name__ == "__main__":
     main()

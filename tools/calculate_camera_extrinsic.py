@@ -32,14 +32,14 @@ from utils.pose_dataframe_utils import convert_pose_df_to_dict
 def main():
 
     parser = argparse.ArgumentParser(description='Compute virtual optitrack camera to camera sensor extrinsic.')
-    parser.add_argument('--extrinsic_scene_name', default='', type=str, help='Which scene to use to calculate extrinsic. Else, uses latest extrinsic scene in extrinsics dir')
+    parser.add_argument('--scene_name', default='', type=str, help='Which scene to use to calculate extrinsic. Else, uses latest extrinsic scene in extrinsics dir')
 
     args = parser.parse_args()
 
     cam_opti_extr_calc = CameraOptiExtrinsicCalculator()
 
-    if args.extrinsic_scene_name:
-        scene_dir = os.path.join(EXTRINSICS_DIR, args.extrinsic_scene_name)
+    if args.scene_name:
+        scene_dir = os.path.join(EXTRINSICS_DIR, args.scene_name)
     else:
         extrinsic_scenes = list(os.listdir(EXTRINSICS_DIR))
         latest_extrinsic_scene = get_latest_str_from_str_time_list(extrinsic_scenes)

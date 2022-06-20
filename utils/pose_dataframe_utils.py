@@ -37,3 +37,15 @@ def convert_pose_dict_to_df(pose_dict):
 
     return df
 
+def pose_df_from_xyzs_rots(frames, xyzs, quats):
+    assert(xyzs.shape[0] == quats.shape[0])
+
+    rows = np.hstack((frames, xyzs, quats))
+    columns = ["Frame", "camera_Rotation_X","camera_Rotation_Y","camera_Rotation_Z","camera_Rotation_W", "camera_Position_X","camera_Position_Y","camera_Position_Z"]
+  
+    df = pd.DataFrame(rows, columns=columns)
+    df["Frame"] = df["Frame"].astype(int)
+
+    return df
+
+
