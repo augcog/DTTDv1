@@ -43,6 +43,9 @@ def main():
     else:
         extrinsic_scenes = list(os.listdir(EXTRINSICS_DIR))
         latest_extrinsic_scene = get_latest_str_from_str_time_list(extrinsic_scenes)
+
+        print("using extrinsic scene {0}".format(latest_extrinsic_scene))
+
         scene_dir = os.path.join(EXTRINSICS_DIR, latest_extrinsic_scene)
 
     cam_pose_sync = CameraPoseSynchronizer()
