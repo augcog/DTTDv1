@@ -24,6 +24,9 @@ def main():
     parser = argparse.ArgumentParser(description='Synchronize optitrack poses with frames')
     parser.add_argument('--scene_name', type=str, help='name of scene')
     parser.add_argument('--extrinsic', default=False, action="store_true", help='processing a extrinsic scene')
+    parser.add_argument('--rewrite_images', action='store_true')
+    parser.add_argument('--no-rewrite-images', dest='rewrite_images', action='store_false')
+    parser.set_defaults(rewrite_images=True)
     args = parser.parse_args()
 
     if not args.scene_name and not args.extrinsic:
@@ -53,7 +56,7 @@ def main():
     print("Poses smoothed!")
 
     cam_pose_synchronizer = CameraPoseSynchronizer()
-    cam_pose_synchronizer.synchronize_camera_poses_and_frames(scene_dir, smoothed_poses, write_to_file=True)
+    cam_pose_synchronizer.synchronize_camera_poses_and_frames(scene_dir, smoothed_poses, write_to_file=True, rewrite_images = args.rewrite_images)
 
     print("Poses synchronized!")
 

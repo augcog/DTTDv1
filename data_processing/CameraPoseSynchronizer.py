@@ -34,7 +34,7 @@ class CameraPoseSynchronizer():
     Frame, camera_Rotation_X,camera_Rotation_Y,camera_Rotation_Z,camera_Rotation_W,camera_Position_X,camera_Position_Y,camera_Position_Z
     """
     @staticmethod
-    def synchronize_camera_poses_and_frames(scene_dir, cleaned_opti_poses, show_sync_plot=True, write_to_file=False):
+    def synchronize_camera_poses_and_frames(scene_dir, cleaned_opti_poses, show_sync_plot=True, write_to_file=False, rewrite_images=True):
 
         camera_data_csv = os.path.join(scene_dir, "camera_data.csv")
         camera_time_break_csv = os.path.join(scene_dir, "camera_time_break.csv")
@@ -86,7 +86,7 @@ class CameraPoseSynchronizer():
         #calculate virtual -> opti from ARUCO and extrinsic
 
         camera_opti_calc = CameraOptiExtrinsicCalculator()
-        aruco_to_opti = camera_opti_calc.get_aruco_to_opti()
+        aruco_to_opti = camera_opti_calc.get_aruco_to_opti_transform()
 
         dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         parameters =  cv2.aruco.DetectorParameters_create()
@@ -249,22 +249,24 @@ class CameraPoseSynchronizer():
 
         new_frame_id = 0
 
-        for _, row in tqdm(synced_df_renumbered.iterrows(), total=synced_df_renumbered.shape[0], desc="Writing Renumbered Frames"):
-            old_frame_id = int(row["Frame"])
+        if rewrite_images:
+            for _, row in tqdm(synced_df_renumbered.iterrows(), total=synced_df_renumbered.shape[0], desc="Writing Renumbered Frames"):
+                old_frame_id = int(row["Frame"])
 
-            bgr = load_bgr(raw_frames_dir, old_frame_id)
-            depth = load_depth(raw_frames_dir, old_frame_id)
+                bgr = load_bgr(raw_frames_dir, old_frame_id)
+                depth = load_depth(raw_frames_dir, old_frame_id)
 
-            write_bgr(output_frames_dir, new_frame_id, bgr)
-            write_depth(output_frames_dir, new_frame_id, depth)
+                write_bgr(output_frames_dir, new_frame_id, bgr)
+                write_depth(output_frames_dir, new_frame_id, depth)
 
-            new_frame_id += 1
+                new_frame_id += 1
 
-        new_frame_ids = np.arange(new_frame_id)
+        new_frame_ids = np.arange(synced_df_renumbered.shape[0])
 
         synced_df_renumbered["Frame"] = new_frame_ids
 
-        synced_df_renumbered.to_csv(output_sync)
+        if write_to_file:
+            synced_df_renumbered.to_csv(output_sync)
 
         #write scene metadata num_frames value
         scene_metadata["num_frames"] = synced_df_renumbered.shape[0]

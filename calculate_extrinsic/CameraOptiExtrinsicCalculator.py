@@ -16,29 +16,40 @@ class CameraOptiExtrinsicCalculator():
     def __init__(self):
 
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.aruco_to_opti = np.loadtxt(os.path.join(dir_path, "aruco_marker.txt"))
+        self.aruco_to_opti_offset = np.loadtxt(os.path.join(dir_path, "aruco_marker.txt"))
 
-    @staticmethod
-    def calculate_aruco_to_opti_transform(aruco_to_opti_translation):
-        aruco_to_opti_rot = np.array([[0, -1, 0], [0, 0, 1], [-1, 0, 0]]) #aruco -> opti (rot (3x3))
+        # solve for aruco rotation using marker positions
+        with open(os.path.join(dir_path, "aruco_corners.yaml")) as f:
+            aruco_corners = yaml.safe_load(f)
 
+        aruco_x = np.array(aruco_corners['quad1']) - np.array(aruco_corners['quad2']) + np.array(aruco_corners['quad4']) - np.array(aruco_corners['quad3'])
+        aruco_y = np.array(aruco_corners['quad2']) - np.array(aruco_corners['quad3']) + np.array(aruco_corners['quad1']) - np.array(aruco_corners['quad4'])
+        aruco_x /= np.linalg.norm(aruco_x, keepdims=True)
+        aruco_y /= np.linalg.norm(aruco_y, keepdims=True)
+        aruco_z = np.cross(aruco_x, aruco_y)
+
+        aruco_x = np.expand_dims(aruco_x, -1).T
+        aruco_y = np.expand_dims(aruco_y, -1).T
+        aruco_z = np.expand_dims(aruco_z, -1).T
+
+        opti_to_aruco = np.vstack((aruco_x, aruco_y, aruco_z))
+
+        self.aruco_to_opti_rot = np.linalg.inv(opti_to_aruco)
+
+    def get_aruco_to_opti_transform(self):
+        aruco_to_opti_rot = self.aruco_to_opti_rot #aruco -> opti (rot (3x3))
         aruco_to_opti = np.eye(4)
         aruco_to_opti[:3,:3] = aruco_to_opti_rot
-        aruco_to_opti[:3,3] = aruco_to_opti_translation
+        aruco_to_opti[:3,3] = self.aruco_to_opti_offset - np.array([0, 0.005, 0])
 
         return aruco_to_opti
 
-    @staticmethod
-    def calculate_camera_to_opti_transform(rot_vec, trans, aruco_to_opti_translation):
+    def calculate_camera_to_opti_transform(self, rot_vec, trans):
         aff = affine_matrix_from_rotvec_trans(rot_vec, trans) #aruco -> camera
-        aruco_to_opti = CameraOptiExtrinsicCalculator.calculate_aruco_to_opti_transform(aruco_to_opti_translation)
+        aruco_to_opti = self.get_aruco_to_opti_transform()
         opti_to_aruco = invert_affine(aruco_to_opti)
         affine_transform_opti = np.matmul(aff, opti_to_aruco) #1. opti -> aruco 2. aruco -> camera = opti -> camera
         return invert_affine(affine_transform_opti) #camera -> opti
-
-    def get_aruco_to_opti(self):
-        aruco_to_opti_translation = self.aruco_to_opti - np.array([0, 0.005, 0])
-        return CameraOptiExtrinsicCalculator.calculate_aruco_to_opti_transform(aruco_to_opti_translation)
 
     def calculate_extrinsic(self, scene_dir, synchronized_poses, write_to_file=False):
 
@@ -74,10 +85,7 @@ class CameraOptiExtrinsicCalculator():
 
                 rvec, tvec = rvec.squeeze(), tvec.squeeze()
 
-                #the radius of the marker is 5mm
-                aruco_to_opti_translation = self.aruco_to_opti - np.array([0, 0.005, 0])
-
-                camera_sensor_to_opti_transform = CameraOptiExtrinsicCalculator.calculate_camera_to_opti_transform(rvec, tvec, aruco_to_opti_translation)
+                camera_sensor_to_opti_transform = self.calculate_camera_to_opti_transform(rvec, tvec)
 
                 camera_sensor_to_opti_transforms.append(camera_sensor_to_opti_transform)
                 virtual_camera_to_opti_transforms.append(opti_pose)
@@ -105,13 +113,18 @@ class CameraOptiExtrinsicCalculator():
         rotation_diffs_filtered = []
         translation_diffs_filtered = []
 
+        rotation_skipped = 0
+        translation_skipped = 0
+
         for x in range(1, len(extrinsics)):
 
             rotation_diff = np.linalg.norm(extrinsics[x][:3,:3] - extrinsics_filtered[-1][:3,:3])
             translation_diff = np.linalg.norm(extrinsics[x][:3,3] - extrinsics_filtered[-1][:3,3])
 
-            if rotation_diff > 0.2 or translation_diff > 0.05:
-                print("skipping extrinsic {0} since too much diff".format(x))
+            if rotation_diff > 0.1:
+                rotation_skipped += 1
+            elif translation_diff > 0.05:
+                translation_skipped += 1
             else:
                 extrinsics_filtered.append(extrinsics[x])
                 rotation_diffs_filtered.append(rotation_diff)
@@ -119,6 +132,8 @@ class CameraOptiExtrinsicCalculator():
 
             rotation_diffs.append(rotation_diff)
             translation_diffs.append(translation_diff)
+
+        print("Skipped {0} for large rotation diff. Skipped {1} for large translation diff".format(rotation_skipped, translation_skipped))
 
         if len(rotation_diffs) > 0:
             print("Diffs before filtering")
@@ -149,7 +164,7 @@ class CameraOptiExtrinsicCalculator():
 
         cv2.namedWindow("computed extrinsic validation")
         cv2.namedWindow("original ARUCO")
-        opti_to_aruco = invert_affine(self.get_aruco_to_opti())
+        opti_to_aruco = invert_affine(self.get_aruco_to_opti_transform())
         sensor_to_virtual = invert_affine(extrinsic)
 
         for frame_id, opti_pose in synchronized_poses.items():
