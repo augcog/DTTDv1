@@ -12,6 +12,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
+from pose_refinement.ScenePoseRefiner import ScenePoseRefiner
 from scene_labeling_generation.MetadataGenerator import MetadataGenerator
 from scene_labeling_generation.SemanticLabelingGenerator import SemanticLabelingGenerator
 from utils.constants import SCENES_DIR
@@ -21,7 +22,9 @@ from utils.pose_dataframe_utils import convert_pose_df_to_dict
 def main():
     parser = argparse.ArgumentParser(description='Generate semantic labeling and meta labeling')
     parser.add_argument('scene_name', type=str, help='scene directory (contains scene_meta.yaml and data (frames) and camera_poses)')
-    parser.add_argument('--refine', type=bool, default=True, help="perform scene pose refinement using icp")
+    parser.add_argument('--refine', action='store_true')
+    parser.add_argument('--no-refine', dest='refine', action='store_false')
+    parser.set_defaults(refine=True)
 
     args = parser.parse_args()
 
@@ -49,14 +52,13 @@ def main():
     synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
     synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
 
+    if args.refine:
+        scene_pose_refiner = ScenePoseRefiner(objects)
+        synchronized_poses = scene_pose_refiner.refine_poses(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, icp_refine=False, write_to_file=True)
+
     #generate labels
     semantic_labeling_generator = SemanticLabelingGenerator(objects)
-    semantic_labeling_generator.generate_semantic_labels(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, debug=True, refine_poses=args.refine)
-
-    if args.refine:
-        synchronized_poses_csv = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized_refined.csv")
-        synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
-        synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
+    semantic_labeling_generator.generate_semantic_labels(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, debug=True)
 
     #metadata labeling requires semantic labeling
     metadata_labeling_generator = MetadataGenerator()
