@@ -1,6 +1,5 @@
 """
-Refine camera pose using ICP with objects.
-Objects using manual pose annotation.
+Refine camera pose using manual pose annotation.
 """
 
 from functools import partial
@@ -361,59 +360,59 @@ class ScenePoseRefiner():
 
             translation_delta = min_translation_delta + (max_translation_delta - min_translation_delta) * translation_velocity
 
-        #PRESS F to increase X
+        #PRESS H to increase X
         def increase_x(vis):
             update_translation_delta("incX")
             trans = np.array([translation_delta, 0, 0])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("F"), partial(increase_x))
+        vis.register_key_callback(ord("H"), partial(increase_x))
 
-        #PRESS H to decrease X
+        #PRESS F to decrease X
         def decrease_x(vis):
             update_translation_delta("decX")
             trans = np.array([-translation_delta, 0, 0])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("H"), partial(decrease_x))
+        vis.register_key_callback(ord("F"), partial(decrease_x))
 
-        #PRESS V to increase Y
+        #PRESS B to increase Y
         def increase_y(vis):
             update_translation_delta("incY")
             trans = np.array([0, translation_delta, 0])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("V"), partial(increase_y))
+        vis.register_key_callback(ord("B"), partial(increase_y))
 
-        #PRESS N to decrease Y
+        #PRESS G to decrease Y
         def decrease_y(vis):
             update_translation_delta("decY")
             trans = np.array([0, -translation_delta, 0])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("N"), partial(decrease_y))
+        vis.register_key_callback(ord("G"), partial(decrease_y))
 
-        #PRESS G to increase Z
+        #PRESS N to increase Z
         def increase_z(vis):
             update_translation_delta("incZ")
             trans = np.array([0, 0, translation_delta])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("G"), partial(increase_z))
+        vis.register_key_callback(ord("N"), partial(increase_z))
 
-        #PRESS B to decrease Z
+        #PRESS V to decrease Z
         def decrease_z(vis):
             update_translation_delta("decZ")
             trans = np.array([0, 0, -translation_delta])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("B"), partial(decrease_z))
+        vis.register_key_callback(ord("V"), partial(decrease_z))
 
 #------------------------------------------------------------------------------------------   
 
