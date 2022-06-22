@@ -69,7 +69,6 @@ class SemanticLabelingGenerator():
         for frame_id, sensor_pose in tqdm(synchronized_poses_corrected.items(), total=len(synchronized_poses_corrected)):
 
             rgb = load_rgb(frames_dir, frame_id)
-            depth = load_depth(frames_dir, frame_id)
             h, w, _ = rgb.shape
 
             sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ sensor_pose
@@ -107,7 +106,7 @@ class SemanticLabelingGenerator():
                 obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
 
                 for pt_x, pt_y in obj_pts_projected:
-                    bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 4, color=(255,255,255), thickness=-1)
+                    bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 1, color=(255,255,255), thickness=-1)
                 
                 cv2.imshow("test", bgr)
                 cv2.waitKey(5)

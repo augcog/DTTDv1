@@ -65,11 +65,11 @@ if __name__ == "__main__":
 
             rvec, tvec, corners = aruco_pose
 
-            camera_pcld = pointcloud_from_rgb_depth(rgb, depth_image, 0.001, camera_matrix, camera_dist)
-            aruco_pcld = o3d.geometry.PointCloud()
-            aruco_pcld.points = o3d.utility.Vector3dVector(tvec)
-            o3d.io.write_point_cloud(os.path.join(output_dir, "{0}_camera.ply".format(img_id)), camera_pcld)
-            o3d.io.write_point_cloud(os.path.join(output_dir, "{0}_aruco_origin.ply".format(img_id)), aruco_pcld)
+            # camera_pcld = pointcloud_from_rgb_depth(rgb, depth_image, 0.001, camera_matrix, camera_dist)
+            # aruco_pcld = o3d.geometry.PointCloud()
+            # aruco_pcld.points = o3d.utility.Vector3dVector(tvec)
+            # o3d.io.write_point_cloud(os.path.join(output_dir, "{0}_camera.ply".format(img_id)), camera_pcld)
+            # o3d.io.write_point_cloud(os.path.join(output_dir, "{0}_aruco_origin.ply".format(img_id)), aruco_pcld)
 
             (rvec - tvec).any()  # get rid of that nasty numpy value array error
             cv2.aruco.drawDetectedMarkers(color_image, corners)  # Draw A square around the markers
