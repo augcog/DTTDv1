@@ -46,6 +46,10 @@ class OptiKFSmoother():
 
     @staticmethod
     def smooth_opti_poses_kf(scene_dir, pose_df, write_smoothed_to_file=False):
+
+        pose_df = pose_df.replace('', np.NaN).astype(np.float32)
+        pose_df = pose_df.interpolate()
+
         random_state = np.random.RandomState(0)
         initial_state_covariance = np.eye(13) * 0.01
         transition_covariance = np.eye(13) * 0.1

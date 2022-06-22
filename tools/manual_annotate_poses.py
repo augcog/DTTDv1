@@ -5,6 +5,7 @@ The output will be the object poses in the coordinate system of the camera senso
 """
 
 import argparse
+from functools import partial
 import yaml
 
 import os, sys 
@@ -22,6 +23,7 @@ def main():
     parser = argparse.ArgumentParser(description='Compute virtual optitrack camera to camera sensor extrinsic.')
     parser.add_argument('scene_name', type=str, help='scene directory (contains scene_meta.yaml and data (frames))')
     parser.add_argument('--frame', type=int, default=0, help='which frame to use as coordinate system for annotation')
+    parser.add_argument('--use_prev', default=False, action="store_true", help='use previous annotation')
 
     args = parser.parse_args()
 
@@ -39,7 +41,11 @@ def main():
     synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
 
     manual_pose_annotator = ManualPoseAnnotator(objects)
-    object_poses = manual_pose_annotator.annotate_pose(scene_dir, synchronized_poses, args.frame, ManualPoseAnnotator.icp_pose_initializer)
+    if args.use_prev:
+        initializer = partial(ManualPoseAnnotator.previous_initializer, scene_dir)
+    else:
+        initializer = ManualPoseAnnotator.icp_pose_initializer
+    object_poses = manual_pose_annotator.annotate_pose(scene_dir, synchronized_poses, args.frame, initializer)
     
     object_poses_out = {}
     for obj_id, pose in object_poses.items():

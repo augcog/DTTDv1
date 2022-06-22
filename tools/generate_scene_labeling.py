@@ -24,6 +24,7 @@ def main():
     parser.add_argument('scene_name', type=str, help='scene directory (contains scene_meta.yaml and data (frames) and camera_poses)')
     parser.add_argument('--refine', action='store_true')
     parser.add_argument('--no-refine', dest='refine', action='store_false')
+    parser.add_argument('--fast', default=False, action='store_true')
     parser.set_defaults(refine=True)
 
     args = parser.parse_args()
@@ -56,8 +57,13 @@ def main():
         scene_pose_refiner = ScenePoseRefiner(objects)
         synchronized_poses = scene_pose_refiner.refine_poses(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, icp_refine=False, write_to_file=True)
 
+
+    if args.fast:
+        num_points = 10000
+    else:
+        num_points = 500000
     #generate labels
-    semantic_labeling_generator = SemanticLabelingGenerator(objects)
+    semantic_labeling_generator = SemanticLabelingGenerator(objects, number_of_points=num_points)
     semantic_labeling_generator.generate_semantic_labels(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, debug=True)
 
     #metadata labeling requires semantic labeling

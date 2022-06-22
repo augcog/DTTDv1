@@ -98,13 +98,25 @@ class ManualPoseAnnotator:
                 o3d.registration.TransformationEstimationPointToPoint())
 
             transform_obj_to_scene = transform_obj_to_scene.transformation
-            
+
             print("icp result for obj {0}".format(obj_id))
             print(transform_obj_to_scene)
 
             object_pose_initializations[obj_id] = transform_obj_to_scene
 
         return object_pose_initializations
+
+    @staticmethod
+    def previous_initializer(scene_dir, *args):
+        previous_annotation_file = os.path.join(scene_dir, "annotated_object_poses", "annotated_object_poses.yaml")
+        with open(previous_annotation_file, 'r') as f:
+            annotated_poses = yaml.safe_load(f)
+
+        annotated_poses = annotated_poses["object_poses"]
+
+        annotated_poses = {k: np.array(v) for k, v in annotated_poses.items()}
+
+        return annotated_poses
 
     """
     Skip the ICP. Just put the object where the user clicks.
@@ -224,6 +236,8 @@ class ManualPoseAnnotator:
         object_meshes = {}
         objects_visible = True
 
+        curr_frameid = frameid
+        frame_skip = 20
         
         for obj_id, obj_data in self._objects.items():
             obj_mesh = obj_data["mesh"]
@@ -278,6 +292,78 @@ class ManualPoseAnnotator:
             return True
 
         vis.register_key_callback(ord("3"), partial(toggle_scene_representation))
+
+#------------------------------------------------------------------------------------------
+        #PRESS 4 to toggle camera pointcloud or 3d reconstruction
+        def increase_frameid(vis):
+
+            nonlocal curr_frameid
+            nonlocal annotated_poses
+            nonlocal camera_representations
+
+            new_frameid = (curr_frameid + frame_skip) % num_frames
+            rgb = load_rgb(frames_dir, new_frameid)
+            depth = load_depth(frames_dir, new_frameid)
+
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
+
+            vis.remove_geometry(camera_representations[0], reset_bounding_box=False)
+            camera_representations[0] = camera_pcld
+            vis.add_geometry(camera_representations[0], reset_bounding_box=False)
+
+            old_cam_pose = corrected_synchronized_poses[curr_frameid]
+            new_cam_pose = corrected_synchronized_poses[new_frameid]
+
+            old_to_new = invert_affine(new_cam_pose) @ old_cam_pose
+
+            for obj_id in object_meshes.keys():
+                object_meshes[obj_id] = object_meshes[obj_id].transform(old_to_new)
+                vis.update_geometry(object_meshes[obj_id])
+
+            for obj_id in annotated_poses.keys():
+                annotated_poses[obj_id] = old_to_new @ annotated_poses[obj_id]
+
+            curr_frameid = new_frameid
+
+            return True
+
+        vis.register_key_callback(ord("4"), partial(increase_frameid))
+
+#------------------------------------------------------------------------------------------
+        #PRESS 5 to toggle camera pointcloud or 3d reconstruction
+        def decrease_frameid(vis):
+
+            nonlocal curr_frameid
+            nonlocal annotated_poses
+            nonlocal camera_representations
+
+            new_frameid = (curr_frameid - frame_skip + num_frames) % num_frames
+            rgb = load_rgb(frames_dir, new_frameid)
+            depth = load_depth(frames_dir, new_frameid)
+
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
+
+            vis.remove_geometry(camera_representations[0], reset_bounding_box=False)
+            camera_representations[0] = camera_pcld
+            vis.add_geometry(camera_representations[0], reset_bounding_box=False)
+
+            old_cam_pose = corrected_synchronized_poses[curr_frameid]
+            new_cam_pose = corrected_synchronized_poses[new_frameid]
+
+            old_to_new = invert_affine(new_cam_pose) @ old_cam_pose
+
+            for obj_id in object_meshes.keys():
+                object_meshes[obj_id] = object_meshes[obj_id].transform(old_to_new)
+                vis.update_geometry(object_meshes[obj_id])
+
+            for obj_id in annotated_poses.keys():
+                annotated_poses[obj_id] = old_to_new @ annotated_poses[obj_id]
+
+            curr_frameid = new_frameid
+
+            return True
+
+        vis.register_key_callback(ord("5"), partial(decrease_frameid))
 
 #------------------------------------------------------------------------------------------
 
@@ -465,5 +551,14 @@ class ManualPoseAnnotator:
 
         vis.run()
         vis.destroy_window()
+
+        #transform poses back to annotation frame
+        curr_pose = corrected_synchronized_poses[curr_frameid]
+        annotated_pose = corrected_synchronized_poses[frameid]
+
+        correction = invert_affine(annotated_pose) @ curr_pose
+
+        for obj_id in annotated_poses.keys():
+            annotated_poses[obj_id] = correction @ annotated_poses[obj_id]
 
         return annotated_poses

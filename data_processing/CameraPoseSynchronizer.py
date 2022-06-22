@@ -76,7 +76,7 @@ class CameraPoseSynchronizer():
             total_pts = depth.shape[0] * depth.shape[1]
             valid_per = np.count_nonzero(depth) / total_pts
 
-            return valid_per > 0.3
+            return valid_per > 0.361
 
         camera_df = camera_df[camera_df['Frame'].apply(depth_is_good)]
 
