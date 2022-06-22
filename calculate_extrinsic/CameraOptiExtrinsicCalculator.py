@@ -117,13 +117,12 @@ class CameraOptiExtrinsicCalculator():
         translation_skipped = 0
 
         for x in range(1, len(extrinsics)):
-
-            rotation_diff = np.linalg.norm(extrinsics[x][:3,:3] - extrinsics_filtered[-1][:3,:3])
+            rotation_diff = np.arccos((np.trace(extrinsics[x][:3,:3] @ np.linalg.inv(extrinsics_filtered[-1][:3,:3])) - 1.) / 2.)
             translation_diff = np.linalg.norm(extrinsics[x][:3,3] - extrinsics_filtered[-1][:3,3])
 
-            if rotation_diff > 0.1:
+            if rotation_diff > 0.03:
                 rotation_skipped += 1
-            elif translation_diff > 0.05:
+            elif translation_diff > 0.015:
                 translation_skipped += 1
             else:
                 extrinsics_filtered.append(extrinsics[x])

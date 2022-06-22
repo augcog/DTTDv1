@@ -14,6 +14,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from calculate_extrinsic.CameraOptiExtrinsicCalculator import CameraOptiExtrinsicCalculator
 from utils.camera_utils import load_intrinsics, load_distortion
+from utils.depth_utils import filter_depths_valid_percentage
 from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, write_bgr, load_depth, write_depth
 
 class CameraPoseSynchronizer():
@@ -26,7 +27,6 @@ class CameraPoseSynchronizer():
         return df
 
     """
-
     Uses ARUCO data from frames and opti poses to synchronize the two pose streams.
     Writes a cleaned data and cleaned camera_poses_synchronized.csv (numbered 00000-n)
 
@@ -68,7 +68,7 @@ class CameraPoseSynchronizer():
 
         #prune bad depth images
 
-        def depth_is_good(frame_id):
+        def valid_per(frame_id):
 
             frame_id = int(frame_id)
             depth = load_depth(raw_frames_dir, frame_id)
@@ -76,9 +76,12 @@ class CameraPoseSynchronizer():
             total_pts = depth.shape[0] * depth.shape[1]
             valid_per = np.count_nonzero(depth) / total_pts
 
-            return valid_per > 0.361
+            return valid_per
 
-        camera_df = camera_df[camera_df['Frame'].apply(depth_is_good)]
+        depth_valid_percentage = np.array(camera_df['Frame'].apply(valid_per))
+        depth_mask = filter_depths_valid_percentage(depth_valid_percentage)
+
+        camera_df = camera_df[depth_mask]
 
         camera_calib_df = camera_df.copy()
         camera_calib_df = camera_calib_df[camera_calib_df['Frame'].apply(lambda x : x >= calibration_start_frame_id and x < calibration_end_frame_id)]
@@ -273,5 +276,72 @@ class CameraPoseSynchronizer():
 
         with open(scene_metadata_file, 'w') as file:
             yaml.dump(scene_metadata, file)
+
+        return synced_df_renumbered, total_offset, np.array(camera_capture_df["Frame"])
+
+    @staticmethod
+    def get_synchronized_camera_poses_and_frames_with_known_offset(scene_dir, cleaned_opti_poses, total_offset, frame_ids):
+        camera_data_csv = os.path.join(scene_dir, "camera_data.csv")
+        scene_metadata_file = os.path.join(scene_dir, "scene_meta.yaml")
+
+        with open(scene_metadata_file, 'r') as file:
+            scene_metadata = yaml.safe_load(file)
+        
+        rotation_x_key = 'camera_Rotation_X'
+        rotation_y_key = 'camera_Rotation_Y'
+        rotation_z_key = 'camera_Rotation_Z'
+        rotation_w_key = 'camera_Rotation_W'
+        position_x_key = 'camera_Position_X'
+        position_y_key = 'camera_Position_Y'
+        position_z_key = 'camera_Position_Z'
+
+        camera_df = pd.read_csv(camera_data_csv)
+        camera_first_timestamp = camera_df['Timestamp'].iloc[0]
+        camera_df['time_delta'] = camera_df['Timestamp'] - camera_first_timestamp
+
+        camera_df = camera_df.set_index("Frame", drop=False)
+        camera_df = camera_df.loc[frame_ids]
+
+        op_df = cleaned_opti_poses
+        op_df.replace('', np.nan, inplace=True)
+        op_df = op_df.dropna()
+
+        camera_capture_df = camera_df.copy()
+
+        op_capture_df = op_df.copy()
+
+        # calculate capture_time_off, sync opti-track to the clock of azure kinect
+        capture_time_off = total_offset
+        camera_capture_df['time_delta'] += capture_time_off # relate to the op start time
+        camera_capture_times_synced_to_opti = np.array(camera_capture_df['time_delta']).astype(np.float32)
+
+        op_capture_times = np.array(op_capture_df['Time_Seconds']).astype(np.float32)
+        op_rotation_x_interp = Akima1DInterpolator(op_capture_times, op_capture_df[rotation_x_key])
+        op_rotation_y_interp = Akima1DInterpolator(op_capture_times, op_capture_df[rotation_y_key])
+        op_rotation_z_interp = Akima1DInterpolator(op_capture_times, op_capture_df[rotation_z_key])
+        op_rotation_w_interp = Akima1DInterpolator(op_capture_times, op_capture_df[rotation_w_key])
+        op_position_x_interp = Akima1DInterpolator(op_capture_times, op_capture_df[position_x_key])
+        op_position_y_interp = Akima1DInterpolator(op_capture_times, op_capture_df[position_y_key])
+        op_position_z_interp = Akima1DInterpolator(op_capture_times, op_capture_df[position_z_key])
+
+        synced_df = camera_capture_df[["Frame"]].copy()
+
+        synced_df['camera_Rotation_X'] = np.array(op_rotation_x_interp(camera_capture_times_synced_to_opti))
+        synced_df['camera_Rotation_Y'] = np.array(op_rotation_y_interp(camera_capture_times_synced_to_opti))
+        synced_df['camera_Rotation_Z'] = np.array(op_rotation_z_interp(camera_capture_times_synced_to_opti))
+        synced_df['camera_Rotation_W'] = np.array(op_rotation_w_interp(camera_capture_times_synced_to_opti))
+        synced_df['camera_Position_X'] = np.array(op_position_x_interp(camera_capture_times_synced_to_opti))
+        synced_df['camera_Position_Y'] = np.array(op_position_y_interp(camera_capture_times_synced_to_opti))
+        synced_df['camera_Position_Z'] = np.array(op_position_z_interp(camera_capture_times_synced_to_opti))
+
+        synced_df.reset_index(inplace=True, drop=True)
+
+        ### synchronization process ends ###
+
+        synced_df_renumbered = synced_df.copy()
+
+        new_frame_ids = np.arange(synced_df_renumbered.shape[0])
+
+        synced_df_renumbered["Frame"] = new_frame_ids
 
         return synced_df_renumbered

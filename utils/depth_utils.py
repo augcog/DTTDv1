@@ -1,7 +1,5 @@
-from PIL import Image
-import os
 import numpy as np
-import cv2
+import pandas as pd
 
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -35,23 +33,25 @@ def norm2bgr(norm):
     norm = ((norm + 1.0) * 127).astype("uint8")
     return norm
 
-def main():
-    ycb_root = "datasets/ycb/YCB_Video_Dataset/"
-    test_img = np.array(Image.open(os.path.join(ycb_root, "data/0000/000001-depth.png")))
+def filter_depths_valid_percentage(depth_valid):
 
-    cv2.imshow("xd", test_img)
-    cv2.waitKey(0)
-    print(test_img.shape, test_img.dtype)
-    fx = 1066.778
-    fy = 1067.487
+    rolling_window_size = 10
 
-    normals = compute_normals((test_img / 10).astype(np.uint16), fx, fy)
-    print("normals_map_out z mean:",  normals[:, :, 2].mean())
+    rolling_max = pd.Series(depth_valid).rolling(rolling_window_size).max()
+    rolling_max = rolling_max[rolling_window_size - 1:]
 
-    vis_normals = norm2bgr(normals)
-    cv2.imshow("xd2", vis_normals)
-    cv2.waitKey(0)
+    rolling_max = np.pad(rolling_max, (0, len(depth_valid) - len(rolling_max)), 'edge')
 
-if __name__ == "__main__":
-    main()
+    valid_threshold = 0.8 * rolling_max
+    definitely_bad = depth_valid < valid_threshold
+
+    diff_threshold = 0.01
+    depth_valid_diffs = depth_valid[1:] - depth_valid[:-1]
+    diff_bad = np.abs(depth_valid_diffs) > diff_threshold
+
+    mask_out = np.ones_like(depth_valid).astype(bool)
+    mask_out[definitely_bad] = False
+    mask_out[1:][diff_bad] = False
+
+    return mask_out
     

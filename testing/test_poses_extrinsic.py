@@ -1,3 +1,4 @@
+import argparse
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,14 +12,34 @@ from calculate_extrinsic.CameraOptiExtrinsicCalculator import CameraOptiExtrinsi
 from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
 from utils.affine_utils import invert_affine, rotvec_trans_from_affine_matrix
 from utils.camera_utils import load_intrinsics, load_distortion, load_extrinsics
+from utils.constants import EXTRINSICS_DIR
+from utils.datetime_utils import get_latest_str_from_str_time_list
 from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth
 from utils.pose_dataframe_utils import convert_pose_df_to_dict
 
 def main():
-    scene_dir = os.path.join(dir_path, "..", "extrinsics_scenes/2022-06-17-17-56-49")
+    parser = argparse.ArgumentParser(description='Synchronize optitrack poses with frames')
+    parser.add_argument('--scene_name', type=str, help='name of scene')
+    args = parser.parse_args()
+
+    if args.scene_name:
+        scene_dir = os.path.join(EXTRINSICS_DIR, args.scene_name)
+    else:
+        extrinsic_scenes = list(os.listdir(EXTRINSICS_DIR))
+        latest_extrinsic_scene = get_latest_str_from_str_time_list(extrinsic_scenes)
+
+        print("using extrinsic scene {0}".format(latest_extrinsic_scene))
+        
+        scene_dir = os.path.join(EXTRINSICS_DIR, latest_extrinsic_scene)
+
     frames_dir = os.path.join(scene_dir, "data")
-    pose_csvs = ["camera_poses_synchronized.csv", "camera_poses_synchronized_1.csv", "camera_poses_synchronized_2.csv"]
-    pose_csvs = [os.path.join(scene_dir, "camera_poses", c) for c in pose_csvs]
+
+    pose_csvs_dir = os.path.join(scene_dir, "camera_poses_test")
+    pose_csvs =  os.listdir(pose_csvs_dir)
+
+    print("Using the following pose csvs:", pose_csvs)
+
+    pose_csvs = [os.path.join(scene_dir, "camera_poses_test", c) for c in pose_csvs]
 
     scene_metadata_file = os.path.join(scene_dir, "scene_meta.yaml")
     with open(scene_metadata_file, 'r') as file:
@@ -108,13 +129,10 @@ def main():
     rot_diffs = np.array(rot_diffs)
     trans_diffs = np.array(trans_diffs)
 
-    print(rot_diffs.shape, trans_diffs.shape)
-
     for i in range(len(poses)):
         r = rot_diffs[:,i]
         plt.plot(np.arange(len(r)), r, label="rot diffs {0}".format(i), linewidth=1)
 
-    plt.yscale('log')
     plt.legend()
     plt.show()
     plt.clf()
@@ -123,7 +141,6 @@ def main():
         t = trans_diffs[:,i]
         plt.plot(np.arange(len(t)), t, label="trans diffs {0}".format(i), linewidth=1)
 
-    plt.yscale('log')
     plt.legend()
     plt.show()
 
