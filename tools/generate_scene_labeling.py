@@ -57,11 +57,11 @@ def main():
         scene_pose_refiner = ScenePoseRefiner(objects)
         synchronized_poses = scene_pose_refiner.refine_poses(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, icp_refine=False, write_to_file=True)
 
-
     if args.fast:
         num_points = 10000
     else:
         num_points = 500000
+
     #generate labels
     semantic_labeling_generator = SemanticLabelingGenerator(objects, number_of_points=num_points)
     semantic_labeling_generator.generate_semantic_labels(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, debug=True)

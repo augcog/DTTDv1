@@ -18,10 +18,8 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
 from utils.camera_utils import load_extrinsics, load_intrinsics, load_distortion
-from utils.pose_dataframe_utils import convert_pose_dict_to_df
-from utils.frame_utils import load_bgr, load_rgb, load_depth, write_debug_label, write_label, write_debug_rgb
+from utils.frame_utils import load_bgr, load_rgb, write_debug_label, write_label
 from utils.mesh_utils import uniformly_sample_mesh_with_textures_as_colors
-from utils.pointcloud_utils import pointcloud_from_rgb_depth
 
 class SemanticLabelingGenerator():
     def __init__(self, objects, number_of_points=10000):
@@ -45,9 +43,7 @@ class SemanticLabelingGenerator():
 
         camera_intrinsics = load_intrinsics(camera_name)
         camera_distortion = load_distortion(camera_name)
-        camera_extrinsics = load_extrinsics(camera_name)
-
-        cam_scale = scene_metadata["cam_scale"]
+        camera_extrinsics = load_extrinsics(camera_name, scene_dir)
 
         sensor_to_virtual_extrinsic = invert_affine(camera_extrinsics)
 
@@ -77,12 +73,6 @@ class SemanticLabelingGenerator():
             #fill these, then argmin over the depth
             label_out = np.zeros((h, w, len(object_pcld_transformed))).astype(np.uint16)
             depth_out = np.ones_like(label_out).astype(np.float32) * 10000 #inf depth
-
-            if debug:
-                rgb_out = np.zeros((h, w, 3, len(object_pcld_transformed))).astype(np.uint8)
-                object_colors = {}
-                for obj_id, obj_pcld in self._objects.items():
-                    object_colors[obj_id] = (np.array(obj_pcld.colors) * 255).astype(np.uint8)
 
             bgr = load_bgr(frames_dir, frame_id)
 
@@ -133,54 +123,14 @@ class SemanticLabelingGenerator():
                 label_buffer = label_out[:,:,idx].flatten()
                 depth_buffer = depth_out[:,:,idx].flatten()
 
-                if debug:
-                    rgb_buffer = rgb_out[:,:,:,idx].reshape((-1, 3))
-                
                 label_buffer[obj_pts_projected_flattened] = obj_id
                 depth_buffer[obj_pts_projected_flattened] = obj_zs
-
-                if debug:
-                    obj_pose_in_sensor = sensor_pose_in_annotated_coordinates_inv @ annotated_poses_single_frame[obj_id]
-                    obj_rot_in_sensor = obj_pose_in_sensor[:3,:3]
-
-                    obj_colors = object_colors[obj_id][mask]
-
-                    normals = np.array(obj_pcld.normals)
-                    normals = normals[mask]
-                    normals = normals @ obj_rot_in_sensor.T
-
-                    normals_mask = normals[:,2] < 0 #only get points with normals facing camera
-                    
-                    obj_colors = obj_colors[normals_mask]
-                    normals = normals[normals_mask]
-                    obj_pts_projected_flattened = obj_pts_projected_flattened[normals_mask]
-
-                    rgb_buffer[obj_pts_projected_flattened] = obj_colors
 
                 label_out[:,:,idx] = label_buffer.reshape((h, w))
                 depth_out[:,:,idx] = depth_buffer.reshape((h, w))
 
-                if debug:
-                    rgb_out[:,:,:,idx] = rgb_buffer.reshape((h, w, 3))
-
             depth_argmin = np.expand_dims(np.argmin(depth_out, axis=-1), -1)
             label_out = np.take_along_axis(label_out, depth_argmin, axis=-1).squeeze(-1)
-
-            if debug:
-                rgb_debug = np.copy(rgb)
-
-                depth_argmin = np.tile(np.expand_dims(depth_argmin, 2), (1, 1, 3, 1))
-                rgb_out = np.take_along_axis(rgb_out, depth_argmin, axis=-1).squeeze(-1)
-                
-                rgb_debug = rgb_debug.reshape((-1, 3))
-                rgb_out = rgb_out.reshape((-1, 3))
-
-                rgb_out_mask = np.sum(rgb_out, axis=-1) > 0
-                rgb_debug[rgb_out_mask] = rgb_out[rgb_out_mask]
-
-                rgb_debug = rgb_debug.reshape((h, w, 3))
-
-                write_debug_rgb(frames_dir, frame_id, rgb_debug)
 
             write_label(frames_dir, frame_id, label_out)
 

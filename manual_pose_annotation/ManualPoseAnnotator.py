@@ -17,7 +17,7 @@ import yaml
 
 import os, sys
 
-from utils.camera_utils import load_distortion, load_extrinsics, load_intrinsics 
+from utils.camera_utils import load_distortion, load_extrinsics, load_intrinsics, write_archive_extrinsic 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
@@ -160,7 +160,7 @@ class ManualPoseAnnotator:
 
         camera_intrinsic_matrix = load_intrinsics(camera_name)
         camera_distortion_coefficients = load_distortion(camera_name)
-        camera_extrinsic = load_extrinsics(camera_name)
+        camera_extrinsic = load_extrinsics(camera_name, scene_dir)
 
         rgb = load_rgb(frames_dir, frameid)
         depth = load_depth(frames_dir, frameid)
@@ -560,5 +560,7 @@ class ManualPoseAnnotator:
 
         for obj_id in annotated_poses.keys():
             annotated_poses[obj_id] = correction @ annotated_poses[obj_id]
+
+        write_archive_extrinsic(camera_extrinsic, scene_dir)
 
         return annotated_poses

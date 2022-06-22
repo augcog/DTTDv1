@@ -33,7 +33,7 @@ class MetadataGenerator():
 
         camera_name = scene_metadata["camera"]
 
-        camera_extrinsics = load_extrinsics(camera_name)
+        camera_extrinsics = load_extrinsics(camera_name, scene_dir)
 
         sensor_to_virtual_extrinsic = invert_affine(camera_extrinsics)
 

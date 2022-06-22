@@ -74,7 +74,7 @@ class ScenePoseRefiner():
 
         camera_intrinsics = load_intrinsics(camera_name)
         camera_distortion = load_distortion(camera_name)
-        camera_extrinsics = load_extrinsics(camera_name)
+        camera_extrinsics = load_extrinsics(camera_name, scene_dir)
 
         cam_scale = scene_metadata["cam_scale"]
 
