@@ -46,7 +46,7 @@ class ScenePoseRefiner():
         trans_init = np.eye(4)
 
         criteria = o3d.registration.ICPConvergenceCriteria()
-        criteria.max_iteration = 5
+        criteria.max_iteration = 3
 
         pose_correction = o3d.registration.registration_icp(
             all_object_pcld, camera_pcld, .01, trans_init,
@@ -99,10 +99,9 @@ class ScenePoseRefiner():
         if icp_refine:
             #use first frame coordinate system as world coordinates
             for frame_id, sensor_pose in tqdm(synchronized_poses_corrected.items(), total=len(synchronized_poses_corrected), desc="icp computing refinement"):
-
+                
                 rgb = load_rgb(frames_dir, frame_id)
                 depth = load_depth(frames_dir, frame_id)
-                h, w, _ = rgb.shape
 
                 sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ sensor_pose
                 sensor_pose_in_annotated_coordinates_inv = invert_affine(sensor_pose_in_annotated_coordinates)
@@ -117,11 +116,11 @@ class ScenePoseRefiner():
                 
                 camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics, camera_distortion)
 
+                #1 -> 2
                 pose_refinement_icp = self.refine_pose_icp(list(objects_in_sensor_coords.values()), camera_pcld)
 
-                sensor_pose_in_annotated_coordinates_icp = pose_refinement_icp @ sensor_pose_in_annotated_coordinates
-
-                synchronized_poses_refined[frame_id] = sensor_pose_annotated_frame @ sensor_pose_in_annotated_coordinates_icp
+                #2 -> 1, 1 -> opti = 2 -> opti
+                synchronized_poses_refined[frame_id] = sensor_pose @ invert_affine(pose_refinement_icp)
         else:
             synchronized_poses_refined = synchronized_poses_corrected
 
@@ -189,6 +188,8 @@ class ScenePoseRefiner():
 
             frame_ids_idx -= 1
             frame_ids_idx = frame_ids_idx + len(frame_ids) % len(frame_ids)
+
+            print("frame: {0}".format(frame_ids[frame_ids_idx]))
             
             rgb = load_rgb(frames_dir, frame_ids[frame_ids_idx])
             depth = load_depth(frames_dir, frame_ids[frame_ids_idx])
@@ -214,6 +215,8 @@ class ScenePoseRefiner():
 
             frame_ids_idx += 1
             frame_ids_idx = frame_ids_idx % len(frame_ids)
+
+            print("frame: {0}".format(frame_ids[frame_ids_idx]))
             
             rgb = load_rgb(frames_dir, frame_ids[frame_ids_idx])
             depth = load_depth(frames_dir, frame_ids[frame_ids_idx])
@@ -423,6 +426,8 @@ class ScenePoseRefiner():
         # (sensor -> opti) back to (virtual -> opti)
         synchronized_poses_refined = {frame_id: sensor_pose @ camera_extrinsics for frame_id, sensor_pose in synchronized_poses_refined.items()}
         synchronized_poses_refined_df = convert_pose_dict_to_df(synchronized_poses_refined)
-        self.save_refined_poses_df(scene_dir, synchronized_poses_refined_df)
+
+        if write_to_file:
+            self.save_refined_poses_df(scene_dir, synchronized_poses_refined_df)
 
         return synchronized_poses_refined

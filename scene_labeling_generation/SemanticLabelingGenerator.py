@@ -18,7 +18,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
 from utils.camera_utils import load_extrinsics, load_intrinsics, load_distortion
-from utils.frame_utils import load_bgr, load_rgb, write_debug_label, write_label
+from utils.frame_utils import load_bgr, load_rgb, write_debug_label, write_label, load_meta
 from utils.mesh_utils import uniformly_sample_mesh_with_textures_as_colors
 
 class SemanticLabelingGenerator():
@@ -111,6 +111,95 @@ class SemanticLabelingGenerator():
                 obj_pcld = objects_in_sensor_coords[idx]
                 
                 obj_pts_in_sensor_coordinates = np.array(obj_pcld.points)
+
+                #need z-coordinate for buffer
+                obj_zs = obj_pts_in_sensor_coordinates[:,2] #(Nx1)
+
+                obj_pts_projected = obj_pts_projected[mask]
+                obj_zs = obj_zs[mask]
+
+                obj_pts_projected_flattened = obj_pts_projected[:,0] + obj_pts_projected[:,1] * w
+
+                label_buffer = label_out[:,:,idx].flatten()
+                depth_buffer = depth_out[:,:,idx].flatten()
+
+                label_buffer[obj_pts_projected_flattened] = obj_id
+                depth_buffer[obj_pts_projected_flattened] = obj_zs
+
+                label_out[:,:,idx] = label_buffer.reshape((h, w))
+                depth_out[:,:,idx] = depth_buffer.reshape((h, w))
+
+            depth_argmin = np.expand_dims(np.argmin(depth_out, axis=-1), -1)
+            label_out = np.take_along_axis(label_out, depth_argmin, axis=-1).squeeze(-1)
+
+            write_label(frames_dir, frame_id, label_out)
+
+            if debug:
+                write_debug_label(frames_dir, frame_id, label_out * 10000)
+
+    """
+    Read 00000_meta.json to get object poses in the frame.
+    """
+    def generate_semantic_labels_from_obj_poses(self, scene_dir, debug=True):
+
+        frames_dir = os.path.join(scene_dir, "data")
+
+        scene_metadata_file = os.path.join(scene_dir, "scene_meta.yaml")
+
+        with open(scene_metadata_file, 'r') as file:
+            scene_metadata = yaml.safe_load(file)
+
+        camera_name = scene_metadata["camera"]
+
+        camera_intrinsics = load_intrinsics(camera_name)
+        camera_distortion = load_distortion(camera_name)
+
+        num_frames = scene_metadata["num_frames"]
+
+    
+        #use first frame coordinate system as world coordinates
+        for frame_id in tqdm(range(num_frames), total=num_frames):
+
+            rgb = load_rgb(frames_dir, frame_id)
+            h, w, _ = rgb.shape
+
+            frame_meta = load_meta(frames_dir, frame_id)
+            transforms = frame_meta["object_poses"]
+            transforms = {int(k) : np.array(v) for k, v in transforms.items()}
+
+            objects_in_sensor_coords = []
+
+            for idx, (obj_id, obj_pcld) in enumerate(self._objects.items()):
+                obj_pcld = o3d.geometry.PointCloud(obj_pcld) #copy constructor
+                obj_pcld = obj_pcld.transform(transforms[obj_id])
+                objects_in_sensor_coords.append(np.array(obj_pcld.points))
+
+            #fill these, then argmin over the depth
+            label_out = np.zeros((h, w, len(objects_in_sensor_coords))).astype(np.uint16)
+            depth_out = np.ones_like(label_out).astype(np.float32) * 10000 #inf depth
+
+            bgr = load_bgr(frames_dir, frame_id)
+            
+            for idx in range(len(objects_in_sensor_coords)):
+
+                obj_pts_in_sensor_coordinates = objects_in_sensor_coords[idx]
+
+                #(Nx2)
+                obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics, camera_distortion)
+                obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
+
+                for pt_x, pt_y in obj_pts_projected:
+                    bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 1, color=(255,255,255), thickness=-1)
+                
+                cv2.imshow("test", bgr)
+                cv2.waitKey(5)
+
+                mask1 = obj_pts_projected[:,0] >= 0
+                mask2 = obj_pts_projected[:,0] < w
+                mask3 = obj_pts_projected[:,1] >= 0
+                mask4 = obj_pts_projected[:,1] < h
+
+                mask = mask1 * mask2 * mask3 * mask4
 
                 #need z-coordinate for buffer
                 obj_zs = obj_pts_in_sensor_coordinates[:,2] #(Nx1)

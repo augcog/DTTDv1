@@ -235,6 +235,7 @@ class ManualPoseAnnotator:
         active_obj_idx = 0
         object_meshes = {}
         objects_visible = True
+        show_all_objects = True
 
         curr_frameid = frameid
         frame_skip = 20
@@ -253,33 +254,70 @@ class ManualPoseAnnotator:
         def increment_active_obj_idx(vis):
 
             nonlocal active_obj_idx
+
+            if not show_all_objects:
+                vis.remove_geometry(object_meshes[object_ids[active_obj_idx]], reset_bounding_box=False)
+
             active_obj_idx += 1
             active_obj_idx = active_obj_idx % len(object_ids)
 
+            if not show_all_objects:
+                vis.add_geometry(object_meshes[object_ids[active_obj_idx]], reset_bounding_box=False)
+
             print("switched to modifying object {0}".format(self._objects[object_ids[active_obj_idx]]["name"]))
 
-            return False
+            return not show_all_objects
 
         vis.register_key_callback(ord("1"), partial(increment_active_obj_idx))
 
 #------------------------------------------------------------------------------------------
         #PRESS 2 to toggle object visibilities
         def toggle_object_visibilities(vis):
-            
+
             nonlocal objects_visible
             if objects_visible:
-                for obj_id, obj_mesh in object_meshes.items():
-                    vis.remove_geometry(obj_mesh, reset_bounding_box=False)
+                if show_all_objects:
+                    for obj_id, obj_mesh in object_meshes.items():
+                        vis.remove_geometry(obj_mesh, reset_bounding_box=False)
+                else:
+                    vis.remove_geometry(object_meshes[object_ids[active_obj_idx]], reset_bounding_box=False)
             else:
-                for obj_id, obj_mesh in object_meshes.items():
-                    vis.add_geometry(obj_mesh, reset_bounding_box=False)
+                if show_all_objects:
+                    for obj_id, obj_mesh in object_meshes.items():
+                        vis.add_geometry(obj_mesh, reset_bounding_box=False)
+                else:
+                    vis.add_geometry(object_meshes[object_ids[active_obj_idx]], reset_bounding_box=False)
+
             objects_visible = not objects_visible
             return True
 
         vis.register_key_callback(ord("2"), partial(toggle_object_visibilities))
 
 #------------------------------------------------------------------------------------------
-        #PRESS 3 to toggle camera pointcloud or 3d reconstruction
+        #PRESS 3 to toggle between 1 object and all objects
+        def toggle_show_all_objects(vis):
+
+            nonlocal show_all_objects
+
+            if objects_visible:
+                if show_all_objects:
+                    for obj_id, obj_mesh in object_meshes.items():
+                        if obj_id == object_ids[active_obj_idx]:
+                            continue
+                        vis.remove_geometry(obj_mesh, reset_bounding_box=False)
+                else:
+                    for obj_id, obj_mesh in object_meshes.items():
+                        if obj_id == object_ids[active_obj_idx]:
+                            continue
+                        vis.add_geometry(obj_mesh, reset_bounding_box=False)
+
+            show_all_objects = not show_all_objects
+            return objects_visible
+
+        vis.register_key_callback(ord("3"), partial(toggle_show_all_objects))
+
+#------------------------------------------------------------------------------------------
+        #PRESS 4 to toggle camera pointcloud or 3d reconstruction
         def toggle_scene_representation(vis):
 
             nonlocal camera_representation_switch
@@ -289,10 +327,10 @@ class ManualPoseAnnotator:
             vis.add_geometry(camera_representations[camera_representation_switch], reset_bounding_box=False)
             return True
 
-        vis.register_key_callback(ord("3"), partial(toggle_scene_representation))
+        vis.register_key_callback(ord("4"), partial(toggle_scene_representation))
 
 #------------------------------------------------------------------------------------------
-        #PRESS 4 to toggle camera pointcloud or 3d reconstruction
+        #PRESS 6 to increment frame
         def increase_frameid(vis):
 
             nonlocal curr_frameid
@@ -325,10 +363,10 @@ class ManualPoseAnnotator:
 
             return True
 
-        vis.register_key_callback(ord("4"), partial(increase_frameid))
+        vis.register_key_callback(ord("6"), partial(increase_frameid))
 
 #------------------------------------------------------------------------------------------
-        #PRESS 5 to toggle camera pointcloud or 3d reconstruction
+        #PRESS 5 to decrement frame 
         def decrease_frameid(vis):
 
             nonlocal curr_frameid
@@ -362,6 +400,33 @@ class ManualPoseAnnotator:
             return True
 
         vis.register_key_callback(ord("5"), partial(decrease_frameid))
+
+#------------------------------------------------------------------------------------------
+        #PRESS SPACE to perform a small ICP on current object
+        def icp_current_obj(vis):
+
+            nonlocal annotated_poses
+
+            criteria = o3d.registration.ICPConvergenceCriteria()
+            criteria.max_iteration = 2
+
+            obj_pcld = object_meshes[object_ids[active_obj_idx]].sample_points_uniformly(number_of_points=1000)
+
+            pose_correction = o3d.registration.registration_icp(
+                obj_pcld, camera_representations[0], .01, np.eye(4),
+                o3d.registration.TransformationEstimationPointToPoint(),
+                criteria)
+
+            pose_correction = pose_correction.transformation
+
+            object_meshes[object_ids[active_obj_idx]] = object_meshes[object_ids[active_obj_idx]].transform(pose_correction)
+            new_annotated_pose = np.copy(annotated_poses[object_ids[active_obj_idx]])
+            annotated_poses[object_ids[active_obj_idx]] = pose_correction @ new_annotated_pose
+            vis.update_geometry(object_meshes[object_ids[active_obj_idx]])
+
+            return True
+
+        vis.register_key_callback(ord(" "), partial(icp_current_obj))
 
 #------------------------------------------------------------------------------------------
 

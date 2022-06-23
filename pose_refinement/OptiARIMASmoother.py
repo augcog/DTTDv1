@@ -51,9 +51,9 @@ class OptiARIMASmoother():
         c = rots[:,2]
         d = rots[:,3]
 
-        op = 2
+        op = 12
         od = 0
-        oq = 2
+        oq = 12
 
         res_x = ARIMA(x, order=(op, od, oq)).fit().predict()
         res_y = ARIMA(y, order=(op, od, oq)).fit().predict()

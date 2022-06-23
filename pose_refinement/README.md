@@ -4,8 +4,8 @@
 NOTE: Moves camera pose, not object poses. (different from manual pose annotator)
 
 Controls:
- * 1: Next frame
- * 2: Previous frame
+ * 1: Previous frame
+ * 2: Next frame
  * 3: Toggle object visibility
  * U: Increase rotation alpha (euler)
  * I: Decrease rotation alpha (euler)

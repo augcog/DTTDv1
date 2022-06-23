@@ -3,19 +3,8 @@
 
 Basically, we take the optitrack which tracks markers, and we need to render the models in those poses, and then collect GT semantic segmentation data like that.
 
-Current Objects:
- 1. Cheerios Box (15.4oz)
- 2. Campbell's Tomato Soup Can (10.75 oz)
- 3. Campbell's Clam Chowder Can (10.5 oz)
- 4. French's Yellow Mustard (14 oz)
- 5. Poptarts Brown Sugar Cinammon Box (12 pc)
- 6. Spam can (12 oz)
- 7. StarKist Chunk Light Tuna Can (5 oz)
- 8. Extra Toasty Cheez-It Box (12.4 oz)
-
-Objects we hope to have soon:
- 1. Expo markers of different color (Planning to use YCB Dataset)
- 2. Scissors (6 inch and 8 inch, Scotch)
+## Objects and Scenes data:
+https://docs.google.com/spreadsheets/d/1weyPvCyxU82EIokMlGhlK5uEbNt9b8a-54ziPpeGjRo/edit?usp=sharing
 
 Final dataset output:
  * `objects` folder

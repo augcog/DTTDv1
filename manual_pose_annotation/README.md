@@ -4,9 +4,10 @@
 Controls:
  * 1: Switch object you are editing
  * 2: Toggle object visibility
- * 3: Toggle between camera pointcloud and 3d reconstruction
- * 4: Increase Frameid
+ * 3: Toggle show all objects
+ * 4: Toggle between camera pointcloud and 3d reconstruction
  * 5: Decrease Frameid
+ * 6: Increase Frameid
  * U: Increase rotation alpha (euler)
  * I: Decrease rotation alpha (euler)
  * O: Increase rotation beta (euler)
@@ -19,4 +20,5 @@ Controls:
  * V: Decrease position Y (backward)
  * G: Increase position Z (up)
  * B: Decrease position Z (down)
+ * SPC: Small ICP on current object
  

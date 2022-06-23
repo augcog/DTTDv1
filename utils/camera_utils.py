@@ -30,6 +30,7 @@ def load_extrinsics(camera_name, scene_dir=None, use_archive=True):
     if scene_dir and use_archive:
         archive_extrinsic_path = os.path.join(scene_dir, "annotated_object_poses", "archive_extrinsic.txt")
         if os.path.isfile(archive_extrinsic_path):
+            print("Using archived extrinsic.")
             return np.loadtxt(archive_extrinsic_path)
         else:
             print("Use_archive set to True, but no archived extrinsic found. Using camera extrinsic.")

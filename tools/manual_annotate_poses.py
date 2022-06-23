@@ -23,8 +23,8 @@ def main():
     parser = argparse.ArgumentParser(description='Compute virtual optitrack camera to camera sensor extrinsic.')
     parser.add_argument('scene_name', type=str, help='scene directory (contains scene_meta.yaml and data (frames))')
     parser.add_argument('--frame', type=int, default=0, help='which frame to use as coordinate system for annotation')
-    parser.add_argument('--use_prev', default=False, action="store_true", help='use previous annotation')
-    parser.add_argument('--refresh_extrinsic', default=False, action="store_true")
+    parser.add_argument('--use-prev', default=False, action="store_true", help='use previous annotation')
+    parser.add_argument('--refresh-extrinsic', default=False, action="store_true")
     args = parser.parse_args()
 
     scene_dir = os.path.join(SCENES_DIR, args.scene_name)
