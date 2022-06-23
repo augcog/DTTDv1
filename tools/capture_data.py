@@ -12,7 +12,7 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from data_capturing.DataCapturer import AzureKinectDataCapturer
+from data_capturing import AzureKinectDataCapturer
 from utils.constants import EXTRINSICS_DIR, SCENES_DIR
 from utils.datetime_utils import current_time_str
 

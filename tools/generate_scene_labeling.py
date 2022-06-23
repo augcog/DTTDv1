@@ -11,10 +11,10 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
-from pose_refinement.ScenePoseRefiner import ScenePoseRefiner
-from scene_labeling_generation.MetadataGenerator import MetadataGenerator
-from scene_labeling_generation.SemanticLabelingGenerator import SemanticLabelingGenerator
+from data_processing import CameraPoseSynchronizer
+from pose_refinement import ScenePoseRefiner
+from scene_labeling_generation import MetadataGenerator
+from scene_labeling_generation import SemanticLabelingGenerator
 from utils.constants import SCENES_DIR
 from utils.object_utils import load_object_meshes
 from utils.pose_dataframe_utils import convert_pose_df_to_dict

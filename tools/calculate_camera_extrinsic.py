@@ -23,8 +23,8 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from calculate_extrinsic.CameraOptiExtrinsicCalculator import CameraOptiExtrinsicCalculator
-from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
+from calculate_extrinsic import CameraOptiExtrinsicCalculator
+from data_processing import CameraPoseSynchronizer
 from utils.constants import EXTRINSICS_DIR
 from utils.datetime_utils import get_latest_str_from_str_time_list
 from utils.pose_dataframe_utils import convert_pose_df_to_dict

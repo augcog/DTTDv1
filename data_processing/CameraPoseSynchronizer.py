@@ -12,7 +12,7 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from calculate_extrinsic.CameraOptiExtrinsicCalculator import CameraOptiExtrinsicCalculator
+from calculate_extrinsic import CameraOptiExtrinsicCalculator
 from utils.camera_utils import load_intrinsics, load_distortion
 from utils.depth_utils import filter_depths_valid_percentage
 from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, write_bgr, load_depth, write_depth

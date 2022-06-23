@@ -145,7 +145,7 @@ class ManualPoseAnnotator:
     camera distortion coefficients, and list of object triangle meshes
     and returns a dict {obj_id: transform initialization}, the affine transform for each object
     """
-    def annotate_pose(self, scene_dir, synchronized_poses, frameid, initialization_method=None):
+    def annotate_pose(self, scene_dir, synchronized_poses, frameid, initialization_method=None, use_archive_extrinsic=True):
 
         frames_dir = os.path.join(scene_dir, "data")
 
@@ -160,7 +160,7 @@ class ManualPoseAnnotator:
 
         camera_intrinsic_matrix = load_intrinsics(camera_name)
         camera_distortion_coefficients = load_distortion(camera_name)
-        camera_extrinsic = load_extrinsics(camera_name, scene_dir)
+        camera_extrinsic = load_extrinsics(camera_name, scene_dir, use_archive=use_archive_extrinsic)
 
         rgb = load_rgb(frames_dir, frameid)
         depth = load_depth(frames_dir, frameid)
@@ -265,9 +265,7 @@ class ManualPoseAnnotator:
 #------------------------------------------------------------------------------------------
         #PRESS 2 to toggle object visibilities
         def toggle_object_visibilities(vis):
-
-            print("toggling object vis!")
-
+            
             nonlocal objects_visible
             if objects_visible:
                 for obj_id, obj_mesh in object_meshes.items():
@@ -561,6 +559,7 @@ class ManualPoseAnnotator:
         for obj_id in annotated_poses.keys():
             annotated_poses[obj_id] = correction @ annotated_poses[obj_id]
 
+        print("archiving extrinsic!")
         write_archive_extrinsic(camera_extrinsic, scene_dir)
 
         return annotated_poses

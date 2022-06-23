@@ -11,7 +11,6 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.constants import OPTI_FRAMERATE
-from utils.pose_dataframe_utils import pose_df_from_xyzs_rots
 
 class OptiKFSmoother():
     def __init__(self):
@@ -54,6 +53,8 @@ class OptiKFSmoother():
         initial_state_covariance = np.eye(13) * 0.01
         transition_covariance = np.eye(13) * 0.1
         observation_covariance = np.eye(7) + random_state.randn(7, 7) * 0.1
+        observation_covariance[0:3,0:3] += 0.3
+        observation_covariance[4:7,4:7] += 0.3
 
         xyzs = np.array(pose_df[['camera_Position_X', 'camera_Position_Y', 'camera_Position_Z']]).astype(np.float32)
         rots = np.array(pose_df[['camera_Rotation_X', 'camera_Rotation_Y', 'camera_Rotation_Z', 'camera_Rotation_W']]).astype(np.float32)

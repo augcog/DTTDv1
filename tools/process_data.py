@@ -14,9 +14,9 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from data_processing.CameraPoseCleaner import CameraPoseCleaner
-from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
-from pose_refinement.OptiKFSmoother import OptiKFSmoother
+from data_processing import CameraPoseCleaner
+from data_processing import CameraPoseSynchronizer
+from pose_refinement import OptiKFSmoother
 from utils.constants import EXTRINSICS_DIR, SCENES_DIR
 from utils.datetime_utils import get_latest_str_from_str_time_list
 

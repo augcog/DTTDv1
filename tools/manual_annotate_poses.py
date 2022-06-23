@@ -12,8 +12,8 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from data_processing.CameraPoseSynchronizer import CameraPoseSynchronizer
-from manual_pose_annotation.ManualPoseAnnotator import ManualPoseAnnotator
+from data_processing import CameraPoseSynchronizer
+from manual_pose_annotation import ManualPoseAnnotator
 from utils.constants import SCENES_DIR
 from utils.object_utils import load_object_meshes
 from utils.pose_dataframe_utils import convert_pose_df_to_dict
@@ -24,7 +24,7 @@ def main():
     parser.add_argument('scene_name', type=str, help='scene directory (contains scene_meta.yaml and data (frames))')
     parser.add_argument('--frame', type=int, default=0, help='which frame to use as coordinate system for annotation')
     parser.add_argument('--use_prev', default=False, action="store_true", help='use previous annotation')
-
+    parser.add_argument('--refresh_extrinsic', default=False, action="store_true")
     args = parser.parse_args()
 
     scene_dir = os.path.join(SCENES_DIR, args.scene_name)
@@ -45,7 +45,7 @@ def main():
         initializer = partial(ManualPoseAnnotator.previous_initializer, scene_dir)
     else:
         initializer = ManualPoseAnnotator.icp_pose_initializer
-    object_poses = manual_pose_annotator.annotate_pose(scene_dir, synchronized_poses, args.frame, initializer)
+    object_poses = manual_pose_annotator.annotate_pose(scene_dir, synchronized_poses, args.frame, initializer, use_archive_extrinsic=(not args.refresh_extrinsic))
     
     object_poses_out = {}
     for obj_id, pose in object_poses.items():
