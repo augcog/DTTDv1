@@ -1,0 +1,13 @@
+cv2
+matplotlib
+numpy
+pillow
+pygame
+pyk4a
+pykalman
+pyyaml
+pandas
+open3d==0.10.0.0
+scipy
+statsmodels==0.13.2
+tqdm
