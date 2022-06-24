@@ -40,6 +40,10 @@ def main():
     synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
     synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
 
+    annotated_object_poses_path = os.path.join(scene_dir, "annotated_object_poses")
+    if not os.path.isdir(annotated_object_poses_path):
+        os.mkdir(annotated_object_poses_path)
+
     manual_pose_annotator = ManualPoseAnnotator(objects)
     if args.use_prev:
         initializer = partial(ManualPoseAnnotator.previous_initializer, scene_dir)
@@ -55,10 +59,6 @@ def main():
     print(object_poses_out) 
 
     #output to annotated_object_poses file
-
-    annotated_object_poses_path = os.path.join(scene_dir, "annotated_object_poses")
-    if not os.path.isdir(annotated_object_poses_path):
-        os.mkdir(annotated_object_poses_path)
 
     output_file = os.path.join(annotated_object_poses_path, "annotated_object_poses.yaml")
 
