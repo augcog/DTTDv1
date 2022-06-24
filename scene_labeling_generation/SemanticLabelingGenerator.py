@@ -167,12 +167,12 @@ class SemanticLabelingGenerator():
             transforms = frame_meta["object_poses"]
             transforms = {int(k) : np.array(v) for k, v in transforms.items()}
 
-            objects_in_sensor_coords = []
+            objects_in_sensor_coords = {}
 
             for idx, (obj_id, obj_pcld) in enumerate(self._objects.items()):
                 obj_pcld = o3d.geometry.PointCloud(obj_pcld) #copy constructor
                 obj_pcld = obj_pcld.transform(transforms[obj_id])
-                objects_in_sensor_coords.append(np.array(obj_pcld.points))
+                objects_in_sensor_coords[obj_id] = np.array(obj_pcld.points)
 
             #fill these, then argmin over the depth
             label_out = np.zeros((h, w, len(objects_in_sensor_coords))).astype(np.uint16)
@@ -180,9 +180,7 @@ class SemanticLabelingGenerator():
 
             bgr = load_bgr(frames_dir, frame_id)
             
-            for idx in range(len(objects_in_sensor_coords)):
-
-                obj_pts_in_sensor_coordinates = objects_in_sensor_coords[idx]
+            for idx, (obj_id, obj_pts_in_sensor_coordinates) in enumerate(objects_in_sensor_coords.items()):
 
                 #(Nx2)
                 obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics, camera_distortion)
