@@ -660,6 +660,79 @@ class ManualPoseAnnotator:
         for obj_id in annotated_poses.keys():
             annotated_poses[obj_id] = correction @ annotated_poses[obj_id]
 
+        #fix minor collisions
+
+        print("Fixing collisions.")
+
+        annotated_poses_collision = {}
+        for obj_id, obj_pose in annotated_poses.items():
+            annotated_poses_collision[obj_id] = np.copy(obj_pose)
+        
+        obj_meshes_collision = {}
+        for obj_id, obj_mesh in object_meshes.items():
+            obj_mesh = o3d.geometry.TriangleMesh(obj_mesh)
+            obj_mesh = obj_mesh.simplify_quadric_decimation(3000)
+            obj_meshes_collision[obj_id] = obj_mesh
+            o3d.io.write_triangle_mesh("test{0}.ply".format(obj_id), obj_meshes_collision[obj_id])
+
+        number_of_movements = 0
+
+        #each movement pushes objects 1 millimeter from one another
+        movement_size = 0.001
+
+        while True:
+
+            moved = False
+
+            for obj_id_1 in annotated_poses_collision.keys():
+                for obj_id_2 in annotated_poses_collision.keys():
+
+                    if obj_id_2 <= obj_id_1:
+                        continue
+
+                    mesh1 = obj_meshes_collision[obj_id_1]
+                    mesh2 = obj_meshes_collision[obj_id_2]
+                    if mesh1.is_intersecting(mesh2):
+                        mesh1_center = mesh1.get_center()
+                        mesh2_center = mesh2.get_center()
+                        diff = mesh2_center - mesh1_center
+
+                        print("Objects {0} and {1} are {2} meters away from each other.".format(self._objects[obj_id_1]["name"], self._objects[obj_id_2]["name"], np.linalg.norm(diff)))
+                        
+                        diff /= np.linalg.norm(diff, keepdims=True)
+
+                        mesh1_translation = -diff * movement_size / 2.
+                        mesh2_translation = diff * movement_size / 2.
+
+                        new_pose_1 = np.copy(annotated_poses_collision[obj_id_1])
+                        new_pose_1[:3,3] += mesh1_translation
+                        annotated_poses_collision[obj_id_1] = new_pose_1
+
+                        new_pose_2 = np.copy(annotated_poses_collision[obj_id_2])
+                        new_pose_2[:3,3] += mesh2_translation
+                        annotated_poses_collision[obj_id_2] = new_pose_2
+
+                        obj_meshes_collision[obj_id_1] = mesh1.translate(mesh1_translation)
+                        obj_meshes_collision[obj_id_2] = mesh2.translate(mesh2_translation)
+
+                        print("Moved {0} and {1} away from each other.".format(self._objects[obj_id_1]["name"], self._objects[obj_id_2]["name"]))
+
+                        number_of_movements += 1
+                        moved = True
+
+            if not moved:
+                break
+
+        print("Fixed collisions between meshes. Required {0} {1} meter translations.".format(number_of_movements, movement_size))
+
+        if number_of_movements > 5:
+            print("WARNING!! This might lead to error, try not to overlap so much!")
+
+        for obj_id, obj_mesh in obj_meshes_collision.items():
+            o3d.io.write_triangle_mesh("test_after_move{0}.ply".format(obj_id), obj_meshes_collision[obj_id])
+
+        annotated_poses = annotated_poses_collision
+
         print("archiving extrinsic!")
         write_archive_extrinsic(camera_extrinsic, scene_dir)
 
