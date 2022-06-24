@@ -17,7 +17,6 @@ sys.path.append(os.path.join(dir_path, ".."))
 from utils.affine_utils import invert_affine
 from utils.camera_utils import load_distortion, load_extrinsics, load_intrinsics
 from utils.frame_utils import load_depth, load_rgb
-from utils.mesh_utils import uniformly_sample_mesh_with_textures_as_colors
 from utils.pointcloud_utils import pointcloud_from_rgb_depth
 from utils.pose_dataframe_utils import convert_pose_dict_to_df
 
@@ -25,7 +24,7 @@ class ScenePoseRefiner():
     def __init__(self, objects, number_of_points=10000):
         self._objects = {}
         for obj_id, obj_data in objects.items():
-            obj_pcld = uniformly_sample_mesh_with_textures_as_colors(obj_data["mesh"], obj_data["texture"], number_of_points)
+            obj_pcld = obj_data["mesh"].sample_points_uniformly(number_of_points=number_of_points)
             self._objects[obj_id] = {"pcld": obj_pcld, "mesh": o3d.geometry.TriangleMesh(obj_data["mesh"])}
         
         self.number_of_points = number_of_points

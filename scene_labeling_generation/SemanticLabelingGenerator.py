@@ -25,7 +25,7 @@ class SemanticLabelingGenerator():
     def __init__(self, objects, number_of_points=10000):
         self._objects = {}
         for obj_id, obj_data in objects.items():
-            obj_pcld = uniformly_sample_mesh_with_textures_as_colors(obj_data["mesh"], obj_data["texture"], number_of_points)
+            obj_pcld = obj_data["mesh"].sample_points_uniformly(number_of_points=number_of_points)
             self._objects[obj_id] = obj_pcld
         
         self.number_of_points = number_of_points
