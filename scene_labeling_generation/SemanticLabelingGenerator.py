@@ -97,9 +97,6 @@ class SemanticLabelingGenerator():
 
                 for pt_x, pt_y in obj_pts_projected:
                     bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 1, color=(255,255,255), thickness=-1)
-                
-                cv2.imshow("test", bgr)
-                cv2.waitKey(5)
 
                 mask1 = obj_pts_projected[:,0] >= 0
                 mask2 = obj_pts_projected[:,0] < w
@@ -133,6 +130,10 @@ class SemanticLabelingGenerator():
 
                 label_out[:,:,idx] = label_buffer.reshape((h, w))
                 depth_out[:,:,idx] = depth_buffer.reshape((h, w))
+
+        
+            cv2.imshow("test", bgr)
+            cv2.waitKey(5)
 
             depth_argmin = np.expand_dims(np.argmin(depth_out, axis=-1), -1)
             label_out = np.take_along_axis(label_out, depth_argmin, axis=-1).squeeze(-1)
