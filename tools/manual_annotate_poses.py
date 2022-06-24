@@ -23,8 +23,10 @@ def main():
     parser = argparse.ArgumentParser(description='Compute virtual optitrack camera to camera sensor extrinsic.')
     parser.add_argument('scene_name', type=str, help='scene directory (contains scene_meta.yaml and data (frames))')
     parser.add_argument('--frame', type=int, default=0, help='which frame to use as coordinate system for annotation')
-    parser.add_argument('--use-prev', default=False, action="store_true", help='use previous annotation')
+    parser.add_argument('--use_prev', help='use previous annotation')
+    parser.add_argument('--no-use-prev', dest='use_prev', action='store_false')
     parser.add_argument('--refresh-extrinsic', default=False, action="store_true")
+    parser.set_defaults(use_prev=True)
     args = parser.parse_args()
 
     scene_dir = os.path.join(SCENES_DIR, args.scene_name)
@@ -45,7 +47,11 @@ def main():
         os.mkdir(annotated_object_poses_path)
 
     manual_pose_annotator = ManualPoseAnnotator(objects)
-    if args.use_prev:
+
+    annotation_file = os.path.join(annotated_object_poses_path, "annotated_object_poses.yaml")
+
+    if args.use_prev and os.path.isfile(annotation_file):
+        print("Using previous annotation.")
         initializer = partial(ManualPoseAnnotator.previous_initializer, scene_dir)
     else:
         initializer = ManualPoseAnnotator.icp_pose_initializer
@@ -60,13 +66,11 @@ def main():
 
     #output to annotated_object_poses file
 
-    output_file = os.path.join(annotated_object_poses_path, "annotated_object_poses.yaml")
-
     annotated_object_poses_out = {}
     annotated_object_poses_out["frame"] = args.frame
     annotated_object_poses_out["object_poses"] = object_poses_out
 
-    with open(output_file, 'w') as outfile:
+    with open(annotation_file, 'w') as outfile:
         yaml.dump(annotated_object_poses_out, outfile)
 
 if __name__ == "__main__":
