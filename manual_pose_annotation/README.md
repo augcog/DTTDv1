@@ -8,6 +8,7 @@ Controls:
  * 4: Toggle between camera pointcloud and 3d reconstruction
  * 5: Decrease Frameid
  * 6: Increase Frameid
+ * 7: Return to first frame
  * U: Increase rotation alpha (euler)
  * I: Decrease rotation alpha (euler)
  * O: Increase rotation beta (euler)

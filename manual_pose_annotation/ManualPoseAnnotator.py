@@ -402,6 +402,42 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("5"), partial(decrease_frameid))
 
 #------------------------------------------------------------------------------------------
+        #PRESS 7 to return to first frame
+        def return_to_start_frame(vis):
+
+            nonlocal curr_frameid
+            nonlocal annotated_poses
+            nonlocal camera_representations
+
+            new_frameid = frameid
+            rgb = load_rgb(frames_dir, new_frameid)
+            depth = load_depth(frames_dir, new_frameid)
+
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
+
+            vis.remove_geometry(camera_representations[0], reset_bounding_box=False)
+            camera_representations[0] = camera_pcld
+            vis.add_geometry(camera_representations[0], reset_bounding_box=False)
+
+            old_cam_pose = corrected_synchronized_poses[curr_frameid]
+            new_cam_pose = corrected_synchronized_poses[new_frameid]
+
+            old_to_new = invert_affine(new_cam_pose) @ old_cam_pose
+
+            for obj_id in object_meshes.keys():
+                object_meshes[obj_id] = object_meshes[obj_id].transform(old_to_new)
+                vis.update_geometry(object_meshes[obj_id])
+
+            for obj_id in annotated_poses.keys():
+                annotated_poses[obj_id] = old_to_new @ annotated_poses[obj_id]
+
+            curr_frameid = new_frameid
+
+            return True
+
+        vis.register_key_callback(ord("7"), partial(return_to_start_frame))
+
+#------------------------------------------------------------------------------------------
         #PRESS SPACE to perform a small ICP on current object
         def icp_current_obj(vis):
 
