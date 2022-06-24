@@ -673,7 +673,6 @@ class ManualPoseAnnotator:
             obj_mesh = o3d.geometry.TriangleMesh(obj_mesh)
             obj_mesh = obj_mesh.simplify_quadric_decimation(3000)
             obj_meshes_collision[obj_id] = obj_mesh
-            o3d.io.write_triangle_mesh("test{0}.ply".format(obj_id), obj_meshes_collision[obj_id])
 
         number_of_movements = 0
 
@@ -727,9 +726,6 @@ class ManualPoseAnnotator:
 
         if number_of_movements > 5:
             print("WARNING!! This might lead to error, try not to overlap so much!")
-
-        for obj_id, obj_mesh in obj_meshes_collision.items():
-            o3d.io.write_triangle_mesh("test_after_move{0}.ply".format(obj_id), obj_meshes_collision[obj_id])
 
         annotated_poses = annotated_poses_collision
 
