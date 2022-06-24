@@ -49,7 +49,7 @@ def main():
     size = (w * 2, h)
 
     fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-    out_vid = cv2.VideoWriter(os.path.join(dir_path, 'out.mp4'), fourcc, 15, size)
+    out_vid = cv2.VideoWriter(os.path.join(dir_path, '..', 'demos' , '{0}.mp4'.format(args.scene_name)), fourcc, 15, size)
 
     for i in range(len(out_arr)):
         out_vid.write(out_arr[i])
