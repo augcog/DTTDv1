@@ -123,6 +123,11 @@ class SemanticLabelingGenerator():
                 label_buffer = label_out[:,:,idx].flatten()
                 depth_buffer = depth_out[:,:,idx].flatten()
 
+                z_sort = np.argsort(obj_zs)[::-1]
+
+                obj_pts_projected_flattened = obj_pts_projected_flattened[z_sort]
+                obj_zs = obj_zs[z_sort]
+
                 label_buffer[obj_pts_projected_flattened] = obj_id
                 depth_buffer[obj_pts_projected_flattened] = obj_zs
 
@@ -209,6 +214,11 @@ class SemanticLabelingGenerator():
 
                 label_buffer = label_out[:,:,idx].flatten()
                 depth_buffer = depth_out[:,:,idx].flatten()
+
+                z_sort = np.argsort(obj_zs)[::-1]
+
+                obj_pts_projected_flattened = obj_pts_projected_flattened[z_sort]
+                obj_zs = obj_zs[z_sort]
 
                 label_buffer[obj_pts_projected_flattened] = obj_id
                 depth_buffer[obj_pts_projected_flattened] = obj_zs
