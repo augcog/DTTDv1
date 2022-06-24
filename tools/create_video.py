@@ -35,7 +35,7 @@ def main():
         color_img = load_bgr(frames_dir, frame_id)
         label = load_label(frames_dir, frame_id)
 
-        label *= 5000
+        label *= 3000
 
         label = np.ascontiguousarray(cv2.cvtColor(label, cv2.COLOR_GRAY2BGR))
 

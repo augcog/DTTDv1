@@ -141,7 +141,7 @@ class SemanticLabelingGenerator():
             write_label(frames_dir, frame_id, label_out)
 
             if debug:
-                write_debug_label(frames_dir, frame_id, label_out * 10000)
+                write_debug_label(frames_dir, frame_id, label_out * 3000)
 
     """
     Read 00000_meta.json to get object poses in the frame.
@@ -233,4 +233,4 @@ class SemanticLabelingGenerator():
             write_label(frames_dir, frame_id, label_out)
 
             if debug:
-                write_debug_label(frames_dir, frame_id, label_out * 10000)
+                write_debug_label(frames_dir, frame_id, label_out * 3000)
