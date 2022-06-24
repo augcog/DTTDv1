@@ -592,59 +592,59 @@ class ManualPoseAnnotator:
 
             translation_delta = min_translation_delta + (max_translation_delta - min_translation_delta) * translation_velocity
 
-        #PRESS H to increase X
+        #PRESS D to increase X
         def increase_x(vis):
             update_translation_delta("incX")
             trans = np.array([translation_delta, 0, 0])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("H"), partial(increase_x))
+        vis.register_key_callback(ord("D"), partial(increase_x))
 
-        #PRESS F to decrease X
+        #PRESS A to decrease X
         def decrease_x(vis):
             update_translation_delta("decX")
             trans = np.array([-translation_delta, 0, 0])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("F"), partial(decrease_x))
+        vis.register_key_callback(ord("A"), partial(decrease_x))
 
-        #PRESS N to increase Y
+        #PRESS W to increase Y
         def increase_y(vis):
             update_translation_delta("incY")
             trans = np.array([0, translation_delta, 0])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("N"), partial(increase_y))
+        vis.register_key_callback(ord("W"), partial(increase_y))
 
-        #PRESS V to decrease Y
+        #PRESS S to decrease Y
         def decrease_y(vis):
             update_translation_delta("decY")
             trans = np.array([0, -translation_delta, 0])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("V"), partial(decrease_y))
+        vis.register_key_callback(ord("S"), partial(decrease_y))
 
-        #PRESS G to increase Z
+        #PRESS Q to increase Z
         def increase_z(vis):
             update_translation_delta("incZ")
             trans = np.array([0, 0, translation_delta])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("G"), partial(increase_z))
+        vis.register_key_callback(ord("Q"), partial(increase_z))
 
-        #PRESS B to decrease Z
+        #PRESS E to decrease Z
         def decrease_z(vis):
             update_translation_delta("decZ")
             trans = np.array([0, 0, -translation_delta])
             translate(vis, trans)
             return True
         
-        vis.register_key_callback(ord("B"), partial(decrease_z))
+        vis.register_key_callback(ord("E"), partial(decrease_z))
 
 #------------------------------------------------------------------------------------------   
 

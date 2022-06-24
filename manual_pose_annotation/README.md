@@ -15,11 +15,11 @@ Controls:
  * P: Decrease rotation beta (euler)
  * K: Increase rotation gamma (euler)
  * L: Decrease rotation gamma (euler)
- * H: Increase position X (right)
- * F: Decrease position X (left)
- * N: Increase position Y (forward)
- * V: Decrease position Y (backward)
- * G: Increase position Z (up)
- * B: Decrease position Z (down)
+ * D: Increase position X (right)
+ * A: Decrease position X (left)
+ * W: Increase position Y (forward)
+ * S: Decrease position Y (backward)
+ * Q: Increase position Z (up)
+ * E: Decrease position Z (down)
  * SPC: Small ICP on current object
  
