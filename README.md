@@ -25,16 +25,27 @@ Final dataset output:
      1. ARUCO Calibration
 	 2. Data collection
 	 	 * If extrinsic scene, data collection phase should be spent observing ARUCO marker
- 3. Process Extrinsic Data to Calculate Extrinsic (If extrinsic scene)
-	 1. Clean raw opti poses (`tools/process_data.py`)
+	 3. Example: <code>python tools/capture_data.py --scene_name official_test az_camera</code>
+		 
+ 3. Check if the Extrinsic file exists
+	 1. If Extrinsic file doesn't exist, then you need to calculate Extrinsic through Step 4
+	 2. Otherwise, process data through Step 5 to generate groundtruth labels
+ 4. Process Extrinsic Data to Calculate Extrinsic (If extrinsic scene)
+	 1. Clean raw opti poses (`tools/process_data.py`) 
 	 2. Sync opti poses with frames (`tools/process_data.py`)
 	 3. Calculate camera extrinsic (`tools/calculate_camera_extrinsic.py`)
- 4. Process Data (If real scene)
-	 1. Clean raw opti poses (`tools/process_data.py`)
-	 2. Sync opti poses with frames (`tools/process_data.py`)
+ 5. Process Data (If real scene)
+	 1. Clean raw opti poses (`tools/process_data.py`) <br>
+	 Example: <code>python tools/process_data.py --scene_name [SCENE_NAME]</code>
+	 2. Sync opti poses with frames (`tools/process_data.py`) <br>
+	 Example: <code>python tools/process_data.py --scene_name [SCENE_NAME]</code>
 	 3. Manually annotate first frame object poses (`tools/manual_annotate_poses.py`)
-	 4. Recover all frame object poses and verify correctness (`tools/generate_scene_labeling.py`)
-	 5. Generate semantic labeling (`tools/generate_scene_labeling.py`)
-	 6. Generate per frame object poses (`tools/generate_scene_labeling.py`)
-
+	 	 1. Modify (`[SCENE_NAME]/scene_meta.yml`) by adding (`objects`) field to the file according to objects and their corresponding ids.<br>
+			Example: <code>python tools/manual_annotate_poses.py official_test</code>
+	 4. Recover all frame object poses and verify correctness (`tools/generate_scene_labeling.py`) <br>
+	 Example: <code>python tools/tools/generate_scene_labeling.py --fast [SCENE_NAME]</code>
+	 5. Generate semantic labeling (`tools/generate_scene_labeling.py`)<br>
+	 Example: <code>python tools/tools/generate_scene_labeling.py [SCENE_NAME]</code>
+	 6. Generate per frame object poses (`tools/generate_scene_labeling.py`)<br>
+	 Example: <code>python tools/tools/generate_scene_labeling.py [SCENE_NAME]</code>
 
