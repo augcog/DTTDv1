@@ -49,3 +49,5 @@ Final dataset output:
 	 6. Generate per frame object poses (`tools/generate_scene_labeling.py`)<br>
 	 Example: <code>python tools/tools/generate_scene_labeling.py [SCENE_NAME]</code>
 
+# Todo: Model Evaluation for this dataset
+Select SOTA pose estimation & image segmentation models and perform evaluations according to certain metrics.
