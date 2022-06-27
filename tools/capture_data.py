@@ -6,7 +6,6 @@ Need to manually place camera_poses.csv output from optitrack into scene_dir/cam
 """
 
 import argparse
-from datetime import datetime
 
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))

@@ -43,11 +43,11 @@ Final dataset output:
 	 	 1. Modify (`[SCENE_NAME]/scene_meta.yml`) by adding (`objects`) field to the file according to objects and their corresponding ids.<br>
 			Example: <code>python tools/manual_annotate_poses.py official_test</code>
 	 4. Recover all frame object poses and verify correctness (`tools/generate_scene_labeling.py`) <br>
-	 Example: <code>python tools/tools/generate_scene_labeling.py --fast [SCENE_NAME]</code>
+	 Example: <code>python tools/generate_scene_labeling.py --fast [SCENE_NAME]</code>
 	 5. Generate semantic labeling (`tools/generate_scene_labeling.py`)<br>
-	 Example: <code>python tools/tools/generate_scene_labeling.py [SCENE_NAME]</code>
+	 Example: <code>python /tools/generate_scene_labeling.py [SCENE_NAME]</code>
 	 6. Generate per frame object poses (`tools/generate_scene_labeling.py`)<br>
-	 Example: <code>python tools/tools/generate_scene_labeling.py [SCENE_NAME]</code>
+	 Example: <code>python tools/generate_scene_labeling.py [SCENE_NAME]</code>
 
 # Todo: Model Evaluation for this dataset
 Select SOTA pose estimation & image segmentation models and perform evaluations according to certain metrics.
