@@ -43,7 +43,7 @@ def main():
     if args.fast:
         num_points = 10000
     else:
-        num_points = 500000
+        num_points = 1000000
 
     if not args.use_prev_obj_poses:
         annotated_poses_csv = os.path.join(scene_dir, "annotated_object_poses", "annotated_object_poses.yaml")

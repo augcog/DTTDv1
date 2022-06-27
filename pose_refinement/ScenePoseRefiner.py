@@ -44,7 +44,7 @@ class ScenePoseRefiner():
         trans_init = np.eye(4)
 
         criteria = o3d.registration.ICPConvergenceCriteria()
-        criteria.max_iteration = 12
+        criteria.max_iteration = 6
 
         pose_correction = o3d.registration.registration_icp(
             all_object_pcld, camera_pcld, .01, trans_init,
