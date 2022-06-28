@@ -13,16 +13,17 @@ from functools import partial
 import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
+from scipy.spatial.distance import cdist
 from scipy.spatial.transform import Rotation as R
 import yaml
 
 import os, sys
-
-from utils.camera_utils import load_distortion, load_extrinsics, load_intrinsics, write_archive_extrinsic 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
+from pose_refinement import ScenePoseRefiner
 from utils.affine_utils import invert_affine
+from utils.camera_utils import load_distortion, load_extrinsics, load_intrinsics, write_archive_extrinsic 
 from utils.depth_utils import fill_missing
 from utils.frame_utils import load_bgr, load_rgb, load_depth, load_o3d_rgb, load_o3d_depth
 from utils.pointcloud_utils import pointcloud_from_rgb_depth
@@ -469,13 +470,30 @@ class ManualPoseAnnotator:
 
         colors = [(80, 225, 116), (74, 118, 56), (194, 193, 120), (176, 216, 249), (214, 251, 255)]
 
-        #PRESS Z to render current view
-        def render_current_view(vis):
+        def render_current_view(refine, vis):
+
+            all_objs_in_sensor_coordinates = []
+
+            for idx, (obj_id, obj_mesh) in enumerate(object_meshes.items()):
+                obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
+                all_objs_in_sensor_coordinates.append(obj_in_sensor_coordinates)
+
+            if refine:
+                #perform camera pose refinement to simulate final result
+
+                scene_pose_refiner = ScenePoseRefiner()
+                refinement = scene_pose_refiner.refine_pose_icp(all_objs_in_sensor_coordinates, camera_representations[0])    
+
+                print("camera refinement: ", refinement)
+
+                for idx in range(len(all_objs_in_sensor_coordinates)):
+                    all_objs_in_sensor_coordinates[idx] = all_objs_in_sensor_coordinates[idx].transform(refinement)
+
             bgr = load_bgr(frames_dir, curr_frameid)
             
-            for idx, (obj_id, obj_mesh) in enumerate(object_meshes.items()):
+            for idx, obj_pcld_in_sensor_coordinates in enumerate(all_objs_in_sensor_coordinates):
 
-                obj_pts_in_sensor_coordinates = np.array(obj_mesh.sample_points_uniformly(number_of_points=10000).points)
+                obj_pts_in_sensor_coordinates = np.array(obj_pcld_in_sensor_coordinates.points)
 
                 #(Nx2)
                 obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsic_matrix, camera_distortion_coefficients)
@@ -485,12 +503,110 @@ class ManualPoseAnnotator:
                     bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 1, color=colors[idx % len(colors)], thickness=-1)
 
             cv2.imshow("rendered view", bgr)
-            cv2.waitKey(0)
+            cv2.waitKey(1000)
+            cv2.destroyWindow("rendered view")
 
             return False
+        #PRESS Z to render current view without running ICP on the camera pose
+        vis.register_key_callback(ord("Z"), partial(render_current_view, False))
 
-        vis.register_key_callback(ord("Z"), partial(render_current_view))
+        #PRESS X to render current view after running some ICP on camera pose
+        vis.register_key_callback(ord("X"), partial(render_current_view, True))
 
+#------------------------------------------------------------------------------------------
+
+        #PRESS C to align objects to ground plane (experimental)
+        def align_to_ground_plane(vis):
+
+            camera_pcld = camera_representations[0]
+
+            obj_id = object_ids[active_obj_idx]
+            obj_pcld = object_meshes[obj_id].sample_points_uniformly(number_of_points=10000)
+
+            obj_pts = np.copy(np.array(obj_pcld.points))
+
+            while True:
+                plane_model, inliers = camera_pcld.segment_plane(distance_threshold=0.007,
+                                                    ransac_n=3,
+                                                    num_iterations=1000)
+
+                [a, b, c, d] = plane_model
+
+                #ensure plane normal is pointing up (assume gravity is downwards (positive Y))
+                if np.array([a, b, c]) @ np.array([0, -1, 0]) < 0:
+
+                    print("flipping normal")
+
+                    a = -a
+                    b = -b
+                    c = -c
+                    d = -d
+
+                plane_normal = np.array([a, b, c])
+
+                closest_pt = np.min(np.abs(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d))
+
+                #might detect a plane outside of the table
+                if closest_pt > 0.05:
+                    camera_pcld = camera_pcld.select_by_index(inliers, inverse=True)
+                else:
+                    break
+
+            
+            most_underground = np.min(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d)
+            upwards_delta = np.array([a, b, c]) * min(most_underground, 0) * -1
+
+            print("moving upwards", upwards_delta)
+
+            obj_pts += upwards_delta
+
+            obj_pts_touching_ground_mask = np.abs(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d) < 0.001
+
+            obj_pts_touching_ground = obj_pts[obj_pts_touching_ground_mask]
+
+            num_pts = obj_pts_touching_ground.shape[0]
+
+            dists = cdist(obj_pts_touching_ground, obj_pts_touching_ground)
+            dists = dists.flatten()
+
+            furthest_pts = np.argmax(dists)
+
+            furthest_pt_1 = int(furthest_pts / num_pts)
+            furthest_pt_2 = int(furthest_pts % num_pts)
+
+            dists = dists.reshape((num_pts, num_pts))
+
+            pt_1 = obj_pts_touching_ground[furthest_pt_1]
+            pt_2 = obj_pts_touching_ground[furthest_pt_2]
+
+            furthest_vec = pt_2 - pt_1
+            furthest_vec /= np.linalg.norm(furthest_vec, keepdims=True)
+            
+            projection = furthest_vec - furthest_vec @ plane_normal / np.square(np.linalg.norm(plane_normal)) * plane_normal
+
+            projection /= np.linalg.norm(projection, keepdims=True)
+
+            rotation = np.arccos(furthest_vec @ projection)
+
+            print("rotating by radians", rotation)
+
+            rot_vec = np.cross(furthest_vec, projection)
+            rot_vec /= np.linalg.norm(projection, keepdims=True)
+
+            rot_mat = R.from_rotvec(rot_vec * rotation).as_matrix()
+
+            affine = np.eye(4)
+            affine[:3,:3] = rot_mat
+            affine[:3,3] = upwards_delta
+
+            object_meshes[obj_id] = object_meshes[obj_id].transform(affine)
+            annotated_poses[obj_id] = affine @ annotated_poses[obj_id]
+
+            vis.update_geometry(object_meshes[obj_id])
+
+            return True
+
+        vis.register_key_callback(ord("C"), partial(align_to_ground_plane))
 #------------------------------------------------------------------------------------------
 
         #ROTATION STUFF
