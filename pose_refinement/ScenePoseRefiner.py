@@ -2,6 +2,7 @@
 Refine camera pose using manual pose annotation.
 """
 
+import cv2
 from functools import partial
 import numpy as np
 import open3d as o3d
@@ -16,12 +17,12 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
 from utils.camera_utils import load_distortion, load_extrinsics, load_intrinsics
-from utils.frame_utils import load_depth, load_rgb
+from utils.frame_utils import load_depth, load_rgb, load_bgr
 from utils.pointcloud_utils import pointcloud_from_rgb_depth
 from utils.pose_dataframe_utils import convert_pose_dict_to_df
 
 class ScenePoseRefiner():
-    def __init__(self, objects, number_of_points=10000):
+    def __init__(self, objects={}, number_of_points=10000):
         self._objects = {}
         for obj_id, obj_data in objects.items():
             obj_pcld = obj_data["mesh"].sample_points_uniformly(number_of_points=number_of_points)
@@ -44,10 +45,10 @@ class ScenePoseRefiner():
         trans_init = np.eye(4)
 
         criteria = o3d.registration.ICPConvergenceCriteria()
-        criteria.max_iteration = 6
+        criteria.max_iteration = 8
 
         pose_correction = o3d.registration.registration_icp(
-            all_object_pcld, camera_pcld, .01, trans_init,
+            all_object_pcld, camera_pcld, .015, trans_init,
             o3d.registration.TransformationEstimationPointToPoint(),
             criteria)
 
@@ -59,7 +60,7 @@ class ScenePoseRefiner():
         refined_path = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized_refined.csv")
         df.to_csv(refined_path)
 
-    def refine_poses(self, scene_dir, annotated_poses_single_frameid, annotated_poses_single_frame, synchronized_poses, icp_refine=True, manual_refine=False, write_to_file=True):
+    def refine_poses(self, scene_dir, annotated_poses_single_frameid, annotated_poses_single_frame, synchronized_poses, icp_refine=True, manual_refine=True, write_to_file=True):
 
         frames_dir = os.path.join(scene_dir, "data")
 
@@ -122,20 +123,11 @@ class ScenePoseRefiner():
         else:
             synchronized_poses_refined = synchronized_poses_corrected
 
-        if manual_refine:
-            # Setting up visualizer for manual refinement      
-            vis = o3d.visualization.VisualizerWithKeyCallback()
-            vis.create_window()
-            vis.get_render_option().background_color = np.asarray([0, 0, 0])
-            render_option = vis.get_render_option()
-            render_option.point_color_option = o3d.visualization.PointColorOption.Color
-
-            view_control = vis.get_view_control()
+        if manual_refine: 
 
             #State
             frame_ids = sorted(list(synchronized_poses_refined.keys()))
             frame_ids_idx = 0
-            objects_visible = True
 
             frame_pose = synchronized_poses_refined[frame_ids[frame_ids_idx]]
             sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ frame_pose
@@ -147,18 +139,34 @@ class ScenePoseRefiner():
                 obj_mesh = obj["mesh"].transform(current_pose @ annotated_obj_pose)
                 object_meshes[obj_id] = obj_mesh
 
-            rgb = load_rgb(frames_dir, frame_ids[frame_ids_idx])
-            depth = load_depth(frames_dir, frame_ids[frame_ids_idx])
+            colors = [(80, 225, 116), (74, 118, 56), (194, 193, 120), (176, 216, 249), (214, 251, 255)]
+            def render_current_view():
 
-            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics, camera_distortion)
+                all_objs_in_sensor_coordinates = []
 
-            #add camera pointcloud
-            vis.add_geometry(camera_pcld)
+                for idx, (obj_id, obj_mesh) in enumerate(object_meshes.items()):
+                    obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
+                    all_objs_in_sensor_coordinates.append(obj_in_sensor_coordinates)
 
-            for obj in object_meshes.values():
-                vis.add_geometry(obj)
+                bgr = load_bgr(frames_dir, frame_ids[frame_ids_idx])
+                
+                for idx, obj_pcld_in_sensor_coordinates in enumerate(all_objs_in_sensor_coordinates):
 
-            def update_objects(vis):
+                    obj_pts_in_sensor_coordinates = np.array(obj_pcld_in_sensor_coordinates.points)
+
+                    #(Nx2)
+                    obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics, camera_distortion)
+                    obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
+
+                    for pt_x, pt_y in obj_pts_projected:
+                        bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 1, color=colors[idx % len(colors)], thickness=-1)
+
+                return bgr
+
+            cv2.namedWindow("rendered frame")
+            cv2.imshow("rendered frame", render_current_view())
+
+            def update_objects():
                 nonlocal current_pose
                 nonlocal object_meshes
 
@@ -166,87 +174,24 @@ class ScenePoseRefiner():
                 sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ frame_pose
                 new_current_pose = invert_affine(sensor_pose_in_annotated_coordinates)
 
-                print("old pose", current_pose)
-                print("new pose", new_current_pose)
-
                 for obj_id in object_meshes.keys():
                     object_meshes[obj_id] = object_meshes[obj_id].transform(new_current_pose @ invert_affine(current_pose))
-                    vis.update_geometry(object_meshes[obj_id])
 
                 current_pose = new_current_pose
 
-            #SETUP KEY CALLBACKS
-    #------------------------------------------------------------------------------------------
-            #PRESS 1 to decrement frameid
-            def decrement_frame_id(vis):
-                nonlocal frame_ids_idx
-                nonlocal camera_pcld
-                nonlocal object_meshes
-                
-                vis.remove_geometry(camera_pcld, reset_bounding_box=False)
-
-                frame_ids_idx -= 1
-                frame_ids_idx = frame_ids_idx + len(frame_ids) % len(frame_ids)
-
-                print("frame: {0}".format(frame_ids[frame_ids_idx]))
-                
-                rgb = load_rgb(frames_dir, frame_ids[frame_ids_idx])
-                depth = load_depth(frames_dir, frame_ids[frame_ids_idx])
-
-                camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics, camera_distortion)
-
-                vis.add_geometry(camera_pcld, reset_bounding_box=False)
-
-                update_objects(vis)
-
-                return True
-
-            vis.register_key_callback(ord("1"), partial(decrement_frame_id))
+                cv2.imshow("rendered frame", render_current_view())
 
     #------------------------------------------------------------------------------------------
-            #PRESS 2 to increment frameid
-            def increment_frame_id(vis):
+            def increment_frame_id():
                 nonlocal frame_ids_idx
-                nonlocal camera_pcld
                 nonlocal object_meshes
-                
-                vis.remove_geometry(camera_pcld, reset_bounding_box=False)
 
                 frame_ids_idx += 1
                 frame_ids_idx = frame_ids_idx % len(frame_ids)
 
                 print("frame: {0}".format(frame_ids[frame_ids_idx]))
-                
-                rgb = load_rgb(frames_dir, frame_ids[frame_ids_idx])
-                depth = load_depth(frames_dir, frame_ids[frame_ids_idx])
-
-                camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics, camera_distortion)
-
-                vis.add_geometry(camera_pcld, reset_bounding_box=False)
-
-                update_objects(vis)
-
-                return True
-
-            vis.register_key_callback(ord("2"), partial(increment_frame_id))
-
-    #------------------------------------------------------------------------------------------
-            #PRESS 3 to toggle object visibilities
-            def toggle_object_visibilities(vis):
-
-                print("toggling object vis!")
-
-                nonlocal objects_visible
-                if objects_visible:
-                    for obj_id, obj_mesh in object_meshes.items():
-                        vis.remove_geometry(obj_mesh, reset_bounding_box=False)
-                else:
-                    for obj_id, obj_mesh in object_meshes.items():
-                        vis.add_geometry(obj_mesh, reset_bounding_box=False)
-                objects_visible = not objects_visible
-                return True
-
-            vis.register_key_callback(ord("3"), partial(toggle_object_visibilities))
+            
+                update_objects()
 
     #------------------------------------------------------------------------------------------
 
@@ -260,12 +205,12 @@ class ScenePoseRefiner():
             rotation_delta = min_rotation_delta
             last_rot_type = ""
 
-            def rotate_using_euler(vis, euler):
+            def rotate_using_euler(euler):
                 nonlocal synchronized_poses_refined
                 delta_rot_mat = R.from_euler("XYZ", euler).as_matrix()
                 synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] = synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] @ delta_rot_mat.T
 
-                update_objects(vis)
+                update_objects()
 
             def update_rotation_delta(rot_type):
                 nonlocal rotation_velocity
@@ -279,59 +224,35 @@ class ScenePoseRefiner():
 
                 rotation_delta = min_rotation_delta + (max_rotation_delta - min_rotation_delta) * rotation_velocity
 
-            #PRESS U to increase alpha (euler angle rotation)
-            def increase_rotation_alpha(vis):
+            def increase_rotation_alpha():
                 update_rotation_delta("incA")
                 euler = np.array([rotation_delta, 0, 0])
-                rotate_using_euler(vis, euler)
-                return True
-            
-            vis.register_key_callback(ord("U"), partial(increase_rotation_alpha))
+                rotate_using_euler(euler)
 
-            #PRESS I to decrease alpha (euler angle rotation)
-            def decrease_rotation_alpha(vis):
+            def decrease_rotation_alpha():
                 update_rotation_delta("decA")
                 euler = np.array([-rotation_delta, 0, 0])
-                rotate_using_euler(vis, euler)
-                return True
-            
-            vis.register_key_callback(ord("I"), partial(decrease_rotation_alpha))
+                rotate_using_euler( euler)
 
-            #PRESS O to increase beta (euler angle rotation)
-            def increase_rotation_beta(vis):
+            def increase_rotation_beta():
                 update_rotation_delta("incB")
                 euler = np.array([0, rotation_delta, 0])
-                rotate_using_euler(vis, euler)
-                return True
-            
-            vis.register_key_callback(ord("O"), partial(increase_rotation_beta))
+                rotate_using_euler(euler)
 
-            #PRESS P to decrease beta (euler angle rotation)
-            def decrease_rotation_beta(vis):
+            def decrease_rotation_beta():
                 update_rotation_delta("decB")
                 euler = np.array([0, -rotation_delta, 0])
-                rotate_using_euler(vis, euler)
-                return True
-            
-            vis.register_key_callback(ord("P"), partial(decrease_rotation_beta))
+                rotate_using_euler(euler)
 
-            #PRESS K to increase gamma (euler angle rotation)
-            def increase_rotation_gamma(vis):
+            def increase_rotation_gamma():
                 update_rotation_delta("incC")
                 euler = np.array([0, 0, rotation_delta])
-                rotate_using_euler(vis, euler)
-                return True
+                rotate_using_euler(euler)
             
-            vis.register_key_callback(ord("K"), partial(increase_rotation_gamma))
-
-            #PRESS L to decrease beta (euler angle rotation)
-            def decrease_rotation_gamma(vis):
+            def decrease_rotation_gamma():
                 update_rotation_delta("decC")
                 euler = np.array([0, 0, -rotation_delta])
-                rotate_using_euler(vis, euler)
-                return True
-            
-            vis.register_key_callback(ord("L"), partial(decrease_rotation_gamma))
+                rotate_using_euler(euler)
 
     #------------------------------------------------------------------------------------------   
 
@@ -345,10 +266,10 @@ class ScenePoseRefiner():
             translation_delta = min_translation_delta
             last_translation_type = ""
 
-            def translate(vis, trans):
+            def translate(trans):
                 nonlocal synchronized_poses_refined
                 synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,3] += synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] @ trans
-                update_objects(vis)
+                update_objects()
 
             def update_translation_delta(translation_type):
                 nonlocal translation_velocity
@@ -362,64 +283,70 @@ class ScenePoseRefiner():
 
                 translation_delta = min_translation_delta + (max_translation_delta - min_translation_delta) * translation_velocity
 
-            #PRESS H to increase X
-            def increase_x(vis):
+            def increase_x():
                 update_translation_delta("incX")
                 trans = np.array([translation_delta, 0, 0])
-                translate(vis, trans)
-                return True
-            
-            vis.register_key_callback(ord("H"), partial(increase_x))
+                translate(trans)
 
-            #PRESS F to decrease X
-            def decrease_x(vis):
+            def decrease_x():
                 update_translation_delta("decX")
                 trans = np.array([-translation_delta, 0, 0])
-                translate(vis, trans)
-                return True
-            
-            vis.register_key_callback(ord("F"), partial(decrease_x))
+                translate(trans)
 
-            #PRESS B to increase Y
-            def increase_y(vis):
+            def increase_y():
                 update_translation_delta("incY")
                 trans = np.array([0, translation_delta, 0])
-                translate(vis, trans)
-                return True
-            
-            vis.register_key_callback(ord("B"), partial(increase_y))
+                translate(trans)
 
-            #PRESS G to decrease Y
-            def decrease_y(vis):
+            def decrease_y():
                 update_translation_delta("decY")
                 trans = np.array([0, -translation_delta, 0])
-                translate(vis, trans)
-                return True
-            
-            vis.register_key_callback(ord("G"), partial(decrease_y))
+                translate(trans)
 
-            #PRESS N to increase Z
-            def increase_z(vis):
+            def increase_z():
                 update_translation_delta("incZ")
                 trans = np.array([0, 0, translation_delta])
-                translate(vis, trans)
-                return True
-            
-            vis.register_key_callback(ord("N"), partial(increase_z))
+                translate(trans)
 
-            #PRESS V to decrease Z
-            def decrease_z(vis):
+            def decrease_z():
                 update_translation_delta("decZ")
                 trans = np.array([0, 0, -translation_delta])
-                translate(vis, trans)
-                return True
-            
-            vis.register_key_callback(ord("V"), partial(decrease_z))
+                translate(trans)
 
     #------------------------------------------------------------------------------------------   
-
-            vis.run()
-            vis.destroy_window()
+            #MAIN LOOP
+            while True:
+                k = cv2.waitKey(0)
+                if k == ord('b'):
+                    break
+                elif k == 13: #enter
+                    increment_frame_id()
+                elif k == ord('r'):
+                    synchronized_poses_refined[frame_ids[frame_ids_idx]] = synchronized_poses_corrected[frame_ids[frame_ids_idx]]
+                elif k == ord('u'):
+                    increase_rotation_alpha()
+                elif k == ord('i'):
+                    decrease_rotation_alpha()
+                elif k == ord('o'):
+                    increase_rotation_beta()
+                elif k == ord('p'):
+                    decrease_rotation_beta()
+                elif k == ord('k'):
+                    increase_rotation_gamma()
+                elif k == ord('l'):
+                    decrease_rotation_gamma()
+                elif k == ord('e'):
+                    decrease_y()
+                elif k == ord('q'):
+                    increase_y()
+                elif k == ord('w'):
+                    increase_z()
+                elif k == ord('s'):
+                    decrease_z()
+                elif k == ord('d'):
+                    decrease_x()
+                elif k == ord('a'):
+                    increase_x()
 
         # change of coordinates for synchronized poses from:
         # (sensor -> opti) back to (virtual -> opti)
