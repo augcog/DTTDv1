@@ -22,5 +22,7 @@ Controls:
  * Q: Increase position Z (up)
  * E: Decrease position Z (down)
  * SPC: Small ICP on current object
- * Z: Render current view (2D)
+ * Z: Render current view without ICP(2D)
+ * X: Render current view with ICP (2D)
+ * C: Align current object to ground plane
  
