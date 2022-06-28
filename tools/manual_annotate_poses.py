@@ -52,6 +52,12 @@ def main():
 
     if args.use_prev and os.path.isfile(annotation_file):
         print("Using previous annotation.")
+
+        #need to retrieve frameid from old annotation
+        with open(annotation_file, "r") as file:
+            annotated_poses_data = yaml.safe_load(file)
+        args.frame = annotated_poses_data["frame"]
+
         initializer = partial(ManualPoseAnnotator.previous_initializer, scene_dir)
     else:
         initializer = ManualPoseAnnotator.icp_pose_initializer

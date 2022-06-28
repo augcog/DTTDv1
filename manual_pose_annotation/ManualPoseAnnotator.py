@@ -8,6 +8,7 @@ Can initialize the pose using
 
 """
 
+import cv2
 from functools import partial
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,7 +24,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
 from utils.depth_utils import fill_missing
-from utils.frame_utils import load_rgb, load_depth, load_o3d_rgb, load_o3d_depth
+from utils.frame_utils import load_bgr, load_rgb, load_depth, load_o3d_rgb, load_o3d_depth
 from utils.pointcloud_utils import pointcloud_from_rgb_depth
 
 class ManualPoseAnnotator:
@@ -463,6 +464,32 @@ class ManualPoseAnnotator:
             return True
 
         vis.register_key_callback(ord(" "), partial(icp_current_obj))
+
+#------------------------------------------------------------------------------------------
+
+        colors = [(80, 225, 116), (74, 118, 56), (194, 193, 120), (176, 216, 249), (214, 251, 255)]
+
+        #PRESS Z to render current view
+        def render_current_view(vis):
+            bgr = load_bgr(frames_dir, curr_frameid)
+            
+            for idx, (obj_id, obj_mesh) in enumerate(object_meshes.items()):
+
+                obj_pts_in_sensor_coordinates = np.array(obj_mesh.sample_points_uniformly(number_of_points=10000).points)
+
+                #(Nx2)
+                obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsic_matrix, camera_distortion_coefficients)
+                obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
+
+                for pt_x, pt_y in obj_pts_projected:
+                    bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 1, color=colors[idx % len(colors)], thickness=-1)
+
+            cv2.imshow("rendered view", bgr)
+            cv2.waitKey(0)
+
+            return False
+
+        vis.register_key_callback(ord("Z"), partial(render_current_view))
 
 #------------------------------------------------------------------------------------------
 
