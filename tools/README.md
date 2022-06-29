@@ -86,7 +86,10 @@ Uses the manual annotated poses for a single frame to generate semantic segmenta
  2. `--refine`: Perform camera pose refinement using ICP. (Defaults to True). This process takes around 5 minutes for a 200 frame scene, so not recommended until you are sure your annotations are close to correct. The refinement also relies upon the annotations in order to correct camera poses, so inaccurate poses will hurt the refinement.
  3. `--no-refine`: Don't perform camera pose refinement. Recommended option for testing/verification of annotation.
  4. `--fast`: Project fewer points onto the camera frame from each object. This will result in a much more sparse output, but runs much faster. If this flag isn't used, the runtime is between 20 minutes to an hour. If this flag is used, the runtime is less than 3 minutes. Use this flag when testing. Don't use this flag for final label output.
- 5. `--use-prev-obj-pose`: Use the object poses within each frame's metadata in order to generate the labeling. This is recommended after running the algorithm once with `--refine` and `--fast`. Basically, this uses a previously calculated camera pose refinement. 
+ 5. `--use-prev-obj-pose`: Use the object poses within each frame's metadata in order to generate the labeling. This is recommended after running the algorithm once with `--refine` and `--fast`. Basically, this uses a previously calculated camera pose refinement. Setting this flag means all other flags regarding refinement are ignored (since the object poses are determined from the frame metadata and not computed).
+ 6. `--use-prev-refinement`: Use the previous refinement results as the synchronized poses.
+ 7. `--icp_refine`: Perform an ICP refinement phase if `refine` is set to True. (Defaults to True).
+ 8. `--no-icp-refine`: Skip the ICP refinement phase if `refine` is set to True. Recommended if using `--use-prev-refinement`, and the previous refinement already ran an ICP phase.
 
 ### Outputs
 
@@ -113,7 +116,7 @@ Manual annotate the poses of the object in the scene according to the first fram
 
 ### Arguments
 
- 1. `--scene_name`: Name of scene that will be processed. Searches inside `SCENE_DIR`.
+ 1. `scene_name`: Name of scene that will be processed. Searches inside `SCENE_DIR`.
  2. `--frame`: Which frame will be used as the manual annotation frame. Defaults to 0. Usually don't change this unless you have a good reason (the first frame doesn't show all the objects).
  3. `--use_prev`: Flag to initialize the object pose annotations using a previous set of pose annotations. (Defaults to True).
  4. `--no-use-prev`: Flag to disable initialization of object poses using a previous set of pose annotations. Not recommended.

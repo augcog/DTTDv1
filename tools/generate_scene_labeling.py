@@ -23,9 +23,12 @@ def main():
     parser.add_argument('scene_name', type=str, help='scene directory (contains scene_meta.yaml and data (frames) and camera_poses)')
     parser.add_argument('--refine', action='store_true')
     parser.add_argument('--no-refine', dest='refine', action='store_false')
+    parser.add_argument('--icp_refine', action='store_true')
+    parser.add_argument('--no-icp-refine', dest='icp_refine', action='store_false')
     parser.add_argument('--fast', default=False, action='store_true')
+    parser.add_argument('--use-prev-refinement', default=False, action='store_true')
     parser.add_argument('--use-prev-obj-poses', default=False, action='store_true', help='use the object poses created during a previous call to this tool to generate semantic segmentations only.')
-    parser.set_defaults(refine=True)
+    parser.set_defaults(refine=True, icp_refine=True)
 
     args = parser.parse_args()
 
@@ -55,13 +58,18 @@ def main():
         annotated_poses = {k: np.array(v) for k, v in annotated_poses.items()}
 
         cam_pose_sync = CameraPoseSynchronizer()
-        synchronized_poses_csv = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized.csv")
+
+        if args.use_prev_refinement:
+            synchronized_poses_csv = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized_refined.csv")
+        else:
+            synchronized_poses_csv = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized.csv")
+
         synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
         synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
 
         if args.refine:
             scene_pose_refiner = ScenePoseRefiner(objects)
-            synchronized_poses = scene_pose_refiner.refine_poses(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, icp_refine=True, write_to_file=True)
+            synchronized_poses = scene_pose_refiner.refine_poses(scene_dir, annotated_poses_frameid, annotated_poses, synchronized_poses, icp_refine=args.icp_refine, write_to_file=True)
 
         #generate labels
         semantic_labeling_generator = SemanticLabelingGenerator(objects, number_of_points=num_points)
