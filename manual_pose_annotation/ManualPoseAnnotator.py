@@ -4,7 +4,8 @@ Goal: Write a manual pose annotator for the dataset.
 Can initialize the pose using 
 1) algorithm
 2) ICP
-3) idk other stuff
+3) previous annotation
+4) etc.
 
 """
 
@@ -252,7 +253,6 @@ class ManualPoseAnnotator:
 
         #SETUP KEY CALLBACKS
 #------------------------------------------------------------------------------------------
-        #PRESS 1 to change which object you are annotating
         def increment_active_obj_idx(vis):
 
             nonlocal active_obj_idx
@@ -273,7 +273,6 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("1"), partial(increment_active_obj_idx))
 
 #------------------------------------------------------------------------------------------
-        #PRESS 2 to toggle object visibilities
         def toggle_object_visibilities(vis):
 
             nonlocal objects_visible
@@ -296,7 +295,6 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("2"), partial(toggle_object_visibilities))
 
 #------------------------------------------------------------------------------------------
-        #PRESS 3 to toggle between 1 object and all objects
         def toggle_show_all_objects(vis):
 
             nonlocal show_all_objects
@@ -319,7 +317,6 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("3"), partial(toggle_show_all_objects))
 
 #------------------------------------------------------------------------------------------
-        #PRESS 4 to toggle camera pointcloud or 3d reconstruction
         def toggle_scene_representation(vis):
 
             nonlocal camera_representation_switch
@@ -332,7 +329,6 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("4"), partial(toggle_scene_representation))
 
 #------------------------------------------------------------------------------------------
-        #PRESS 6 to increment frame
         def increase_frameid(vis):
 
             nonlocal curr_frameid
@@ -368,7 +364,6 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("6"), partial(increase_frameid))
 
 #------------------------------------------------------------------------------------------
-        #PRESS 5 to decrement frame 
         def decrease_frameid(vis):
 
             nonlocal curr_frameid
@@ -404,7 +399,6 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("5"), partial(decrease_frameid))
 
 #------------------------------------------------------------------------------------------
-        #PRESS 7 to return to first frame
         def return_to_start_frame(vis):
 
             nonlocal curr_frameid
@@ -440,7 +434,6 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("7"), partial(return_to_start_frame))
 
 #------------------------------------------------------------------------------------------
-        #PRESS SPACE to perform a small ICP on current object
         def icp_current_obj(vis):
 
             nonlocal annotated_poses
@@ -507,15 +500,14 @@ class ManualPoseAnnotator:
             cv2.destroyWindow("rendered view")
 
             return False
-        #PRESS Z to render current view without running ICP on the camera pose
+
+
         vis.register_key_callback(ord("Z"), partial(render_current_view, False))
 
-        #PRESS X to render current view after running some ICP on camera pose
         vis.register_key_callback(ord("X"), partial(render_current_view, True))
 
 #------------------------------------------------------------------------------------------
 
-        #PRESS C to align objects to ground plane (experimental)
         def align_to_ground_plane(vis):
 
             camera_pcld = camera_representations[0]
@@ -643,7 +635,6 @@ class ManualPoseAnnotator:
 
             rotation_delta = min_rotation_delta + (max_rotation_delta - min_rotation_delta) * rotation_velocity
 
-        #PRESS U to increase alpha (euler angle rotation)
         def increase_rotation_alpha(vis):
             update_rotation_delta("incA")
             euler = np.array([rotation_delta, 0, 0])
@@ -652,7 +643,6 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("U"), partial(increase_rotation_alpha))
 
-        #PRESS I to decrease alpha (euler angle rotation)
         def decrease_rotation_alpha(vis):
             update_rotation_delta("decA")
             euler = np.array([-rotation_delta, 0, 0])
@@ -661,7 +651,6 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("I"), partial(decrease_rotation_alpha))
 
-        #PRESS O to increase beta (euler angle rotation)
         def increase_rotation_beta(vis):
             update_rotation_delta("incB")
             euler = np.array([0, rotation_delta, 0])
@@ -670,7 +659,6 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("O"), partial(increase_rotation_beta))
 
-        #PRESS P to decrease beta (euler angle rotation)
         def decrease_rotation_beta(vis):
             update_rotation_delta("decB")
             euler = np.array([0, -rotation_delta, 0])
@@ -679,7 +667,6 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("P"), partial(decrease_rotation_beta))
 
-        #PRESS K to increase gamma (euler angle rotation)
         def increase_rotation_gamma(vis):
             update_rotation_delta("incC")
             euler = np.array([0, 0, rotation_delta])
@@ -688,7 +675,6 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("K"), partial(increase_rotation_gamma))
 
-        #PRESS L to decrease beta (euler angle rotation)
         def decrease_rotation_gamma(vis):
             update_rotation_delta("decC")
             euler = np.array([0, 0, -rotation_delta])
@@ -735,7 +721,6 @@ class ManualPoseAnnotator:
 
             translation_delta = min_translation_delta + (max_translation_delta - min_translation_delta) * translation_velocity
 
-        #PRESS D to increase X
         def increase_x(vis):
             update_translation_delta("incX")
             trans = np.array([translation_delta, 0, 0])
@@ -744,7 +729,6 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("D"), partial(increase_x))
 
-        #PRESS A to decrease X
         def decrease_x(vis):
             update_translation_delta("decX")
             trans = np.array([-translation_delta, 0, 0])
@@ -753,7 +737,6 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("A"), partial(decrease_x))
 
-        #PRESS W to increase Y
         def increase_y(vis):
             update_translation_delta("incY")
             trans = np.array([0, translation_delta, 0])
@@ -762,7 +745,6 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("W"), partial(increase_y))
 
-        #PRESS S to decrease Y
         def decrease_y(vis):
             update_translation_delta("decY")
             trans = np.array([0, -translation_delta, 0])
@@ -771,7 +753,6 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("S"), partial(decrease_y))
 
-        #PRESS Q to increase Z
         def increase_z(vis):
             update_translation_delta("incZ")
             trans = np.array([0, 0, translation_delta])
@@ -780,7 +761,6 @@ class ManualPoseAnnotator:
         
         vis.register_key_callback(ord("Q"), partial(increase_z))
 
-        #PRESS E to decrease Z
         def decrease_z(vis):
             update_translation_delta("decZ")
             trans = np.array([0, 0, -translation_delta])

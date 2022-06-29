@@ -3,19 +3,21 @@
 
 NOTE: Moves camera pose, not object poses. (different from manual pose annotator)
 
+Manual refinement now implemented as a 2D refinement procedure.
+
 Controls:
- * 1: Previous frame
- * 2: Next frame
- * 3: Toggle object visibility
- * U: Increase rotation alpha (euler)
- * I: Decrease rotation alpha (euler)
- * O: Increase rotation beta (euler)
- * P: Decrease rotation beta (euler)
- * K: Increase rotation gamma (euler)
- * L: Decrease rotation gamma (euler)
- * H: Increase position X (right)
- * F: Decrease position X (left)
- * B: Increase position Y (down)
- * G: Decrease position Y (up)
- * N: Increase position Z (forward)
- * V: Decrease position Z (backward)
+ * b: Quit (Finished!)
+ * r: Reset to original pre-refined pose
+ * ENTER: Next frame
+ * u: Increase Camera Rotation Alpha
+ * i: Decrease Camera Rotation Alpha
+ * o: Increase Camera Rotation Beta
+ * p: Decrease Camera Rotation Beta
+ * k: Increase Camera Rotation Gamma
+ * l: Decrease Camera Rotation Gamma
+ * q: Increase Camera Y (move objects up relative to camera)
+ * e: Decrease Camera Y (move objects down relative to camera)
+ * w: Increase Camera Z (move objects closer to camera)
+ * s: Decrease Camera Z (move objects farther from camera)
+ * a: Increase Camera X (move objects left relative to camera)
+ * d: Decrease Camera X (move objects right relative to camera)
