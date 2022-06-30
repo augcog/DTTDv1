@@ -12,6 +12,7 @@ Final dataset output:
  * `scenes` folder certain data:
  	 * `scenes/<scene number>/data/` folder
  	 * `scenes/<scene number>/scene_meta.yaml` metadata
+ * `toolbox` folder
 
 # How to run
  1. Setup
