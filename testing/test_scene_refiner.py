@@ -83,7 +83,7 @@ def main():
 
     synchronized_poses_refined = {}
 
-    frame_id = 198
+    frame_id = 0
 
     sensor_pose = synchronized_poses_corrected[frame_id]
     rgb = load_rgb(frames_dir, frame_id)

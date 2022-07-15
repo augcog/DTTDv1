@@ -27,12 +27,14 @@ def main():
         exit(-1)
 
     if args.extrinsic:
+        print("Extrinsic phases")
         if not os.path.isdir(EXTRINSICS_DIR):
             os.mkdir(EXTRINSICS_DIR)
 
         time_str = current_time_str()
         save_dir = os.path.join(EXTRINSICS_DIR, time_str)
     else:
+        print("Data collection phases")
         if not os.path.isdir(SCENES_DIR):
             os.mkdir(SCENES_DIR)
         

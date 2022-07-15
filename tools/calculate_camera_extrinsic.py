@@ -54,7 +54,7 @@ def main():
     synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
     
     extrinsic = cam_opti_extr_calc.calculate_extrinsic(scene_dir, synchronized_poses, write_to_file=True)
-
+    
     print("computed extrinsic:", extrinsic)
     
 if __name__ == "__main__":
