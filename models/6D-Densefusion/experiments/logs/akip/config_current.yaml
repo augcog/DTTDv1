@@ -1,0 +1,52 @@
+add_front_aug: false
+basic_fusion: false
+batch_norm: true
+batch_size: 1
+blur_depth: false
+decay_margin: 0.015
+decay_start: false
+fill_depth: true
+hrnet_labels_path: labels_hrnet
+iteration: 2
+log_dir: experiments/logs/akip
+lr: 0.0001
+lr_scheduler: exponential
+manualSeed: 740
+nepoch: 40
+noise_trans: 0.001
+num_objects: 21
+num_points: 2048
+num_points_mesh: 500
+outf: trained_models/akip
+pcld_encoder: randlanet
+pretrained_cnn: true
+pretrained_model_dir: pretrained_models/
+refine_epoch: 20
+refine_margin: 1.5e-05
+refine_start: false
+repeat_epoch: 1
+resnet: resnet34
+rndla_cfg:
+  d_out:
+  - 32
+  - 64
+  k_n: 32
+  num_classes: 22
+  num_layers: 2
+  num_points: 1024
+  num_sub_points:
+  - 256
+  - 64
+  sub_sampling_ratio:
+  - 4
+  - 4
+root: ./datasets/ak_ip/root
+sym_list: []
+symm_rotation_aug: false
+use_colors: true
+use_confidence: false
+use_hrnet_labels: false
+use_normals: true
+w: 0.015
+w_rate: 0.3
+workers: 1
