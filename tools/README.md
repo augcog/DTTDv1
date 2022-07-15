@@ -75,6 +75,21 @@ None
 
 None
 
+## generate_dataset_root.py
+
+### Purpose
+
+Generates the final output for the dataset. Places outputs into a folder named `root` within the parent directory.
+
+### Arguments
+None
+
+### Other Requirements
+None
+
+### Class Dependencies
+None
+
 ## generate_scene_labeling.py
 
 ### Purpose
@@ -83,12 +98,12 @@ Uses the manual annotated poses for a single frame to generate semantic segmenta
 
 ### Arguments
  1. `scene_name`: Name of the scene that will be processed.
- 2. `--refine`: Perform camera pose refinement using ICP. (Defaults to True). This process takes around 5 minutes for a 200 frame scene, so not recommended until you are sure your annotations are close to correct. The refinement also relies upon the annotations in order to correct camera poses, so inaccurate poses will hurt the refinement.
+ 2. `--refine`: Perform camera pose refinement. (Defaults to True). This process takes around 5 minutes for a 200 frame scene, so not recommended until you are sure your annotations are close to correct. The refinement also relies upon the annotations in order to correct camera poses, so inaccurate poses will hurt the refinement.
  3. `--no-refine`: Don't perform camera pose refinement. Recommended option for testing/verification of annotation.
  4. `--fast`: Project fewer points onto the camera frame from each object. This will result in a much more sparse output, but runs much faster. If this flag isn't used, the runtime is between 20 minutes to an hour. If this flag is used, the runtime is less than 3 minutes. Use this flag when testing. Don't use this flag for final label output.
  5. `--use-prev-obj-pose`: Use the object poses within each frame's metadata in order to generate the labeling. This is recommended after running the algorithm once with `--refine` and `--fast`. Basically, this uses a previously calculated camera pose refinement. Setting this flag means all other flags regarding refinement are ignored (since the object poses are determined from the frame metadata and not computed).
  6. `--use-prev-refinement`: Use the previous refinement results as the synchronized poses.
- 7. `--icp_refine`: Perform an ICP refinement phase if `refine` is set to True. (Defaults to True).
+ 7. `--icp_refine`: Perform an ICP refinement phase if `refine` is set to True. (Defaults to False).
  8. `--no-icp-refine`: Skip the ICP refinement phase if `refine` is set to True. Recommended if using `--use-prev-refinement`, and the previous refinement already ran an ICP phase.
 
 ### Outputs
@@ -166,3 +181,23 @@ None
  1. `CameraPoseCleaner`: Cleans raw OptiTrack poses.
  2. `CameraPoseSynchronizer`: Synchronize camera frames with OptiTrack poses.
  3. `OptiKFSmoother`: Smooth cleaned OptiTrack poses using a Kalman Filter.
+
+## sample_object_pclds.py
+
+### Purpose
+
+Generate `points.xyz` for each object in the `objects` folder.
+
+### Arguments
+
+ 1. `--num_points`: How many points to sample.
+
+### Outputs
+ 1. Outputs a `points.xyz` for each object folder.
+
+### Other Requirements
+None
+
+### Class Dependencies
+None
+
