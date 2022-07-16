@@ -1,0 +1,44 @@
+add_front_aug: false
+basic_fusion: false
+batch_norm: true
+batch_size: 1
+blur_depth: false
+decay_margin: 0.015
+fill_depth: true
+image_size: 300
+iteration: 2
+log_dir: experiments/logs/akip
+lr: 0.0001
+lr_scheduler: exponential
+manualSeed: 2023
+nepoch: 40
+noise_trans: 0.001
+num_objects: 12
+num_points: 12800
+old_batch_mode: false
+outf: trained_models/akip
+pcld_encoder: randlanet
+pretrained_cnn: true
+pretrained_model_dir: pretrained_models/
+refine_epoch: 20
+refine_margin: 1.5e-05
+repeat_epoch: 1
+resnet: resnet18
+rndla_cfg:
+  d_out:
+  - 32
+  - 64
+  k_n: 32
+  num_classes: 22
+  num_layers: 2
+  sub_sampling_ratio:
+  - 4
+  - 4
+root: ./datasets/ak_ip/root
+symm_rotation_aug: false
+use_colors: true
+use_confidence: true
+use_normals: true
+w: 0.015
+w_rate: 0.3
+workers: 1
