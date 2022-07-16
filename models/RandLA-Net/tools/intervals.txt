@@ -1,0 +1,18 @@
+intervals
+finished forward pass 0.010889291313559321
+finished loss 0.015603237817796609
+finished training sample 0.04203647058823529
+finished loading from disk 0.03600233455882353
+finished add front aug 0.039625134978991595
+finished selecting object 0.0037746034663865544
+finished get_bbox 0.024118287289915972
+finished first img_masked 0.032136429096638656
+finished second img_masked 0.0005005561974789917
+finished third img_masked 0.0023390714285714286
+finished doing densefusion's stuff 3.282405462184874e-05
+finished my rotation stuff 0.0005383713235294119
+finished sampling points from roi 0.0004677211134453782
+finished computations 0.001428061449579832
+end to ends
+finished training sample 0.0685264790673026
+finished computations 0.1409633949579832
