@@ -166,8 +166,6 @@ class PoseDataset(data.Dataset):
         object_poses = meta["object_poses"]
         object_poses = {int(k): v for k, v in object_poses.items()}
 
-        print(np.array(object_poses[obj_idx]).shape)
-
         target_r = np.array(object_poses[obj_idx])[:3,:3]
         target_t = np.array(object_poses[obj_idx])[:3,3]
 
@@ -208,7 +206,7 @@ class PoseDataset(data.Dataset):
 
         #NORMALS
         if self.cfg.use_normals:
-            depth_mm = (depth * 1000 * cam_scale)).astype(np.uint16)
+            depth_mm = (depth * 1000 * cam_scale).astype(np.uint16)
             normals = compute_normals(depth_mm, cam_intr[0,0], cam_intr[1,1])
             normals_masked = normals[rmin:rmax, cmin:cmax].reshape((-1, 3))[choose].astype(np.float32).squeeze(0)
 

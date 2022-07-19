@@ -9,7 +9,7 @@ class ConfigRandLA:
         self.k_n = 32  # KNN
         self.num_layers = 2  # Number of layers
         self.num_points = 1024  # Number of input points
-        self.num_classes = 22  # Number of valid classes
+        self.num_classes = 13  # Number of valid classes
 
         self.sub_sampling_ratio = [4, 4]  # sampling ratio of random sampling at each layer
         self.d_out = [32, 64]  # feature dimension
@@ -27,8 +27,8 @@ class Config(yaml.YAMLObject):
         self.use_normals = True #use normals for pcld features
         self.use_colors = True #use colors for pcld features
 
-        self.batch_size = 1
-        self.workers = 1
+        self.batch_size = 8
+        self.workers = 8
 
         self.decay_margin = 0.015
         self.refine_margin = 0.000015 #refine margin should be less than or equal to decay margin (want decay to trigger first)
@@ -53,7 +53,7 @@ class Config(yaml.YAMLObject):
         self.rndla_cfg = ConfigRandLA()
 
         #one of ["pointnet", "pointnet2", "randlanet"]
-        self.pcld_encoder = "randlanet"
+        self.pcld_encoder = "pointnet"
 
         self.resnet = "resnet34"
         self.pretrained_cnn = True
@@ -61,7 +61,7 @@ class Config(yaml.YAMLObject):
 
         self.use_confidence = False #use confidence regression vs. standard voting
 
-        self.fill_depth = True #use hole filling algorithm to fill depth in 2D
+        self.fill_depth = False #use hole filling algorithm to fill depth in 2D
 
         self.blur_depth = False #run a gaussian kernel over depth map in 2D after fill_depth (probably shouldn't since fill depth already has a blur)
 
@@ -83,7 +83,7 @@ class AKIPConfig(Config):
     def __init__(self):
         super().__init__()
 
-        self.root = "./datasets/ak_ip/root"
+        self.root = "E:/datasets/ours/root"
         self.num_objects = 12
         self.num_points = 2048
         self.outf = 'trained_models/akip'
