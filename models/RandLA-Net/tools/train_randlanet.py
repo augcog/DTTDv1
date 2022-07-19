@@ -177,6 +177,8 @@ def main():
 
                 logger.info('Epoch {} | Batch {} | acc:{}'.format(epoch, batch_id, acc.item()))
 
+        torch.save(estimator.state_dict(), '{0}/randla_seg_model_{1}_{2}.pth'.format(cfg.outf, epoch, test_acc_avg / test_count))
+
 
 if __name__ == '__main__':
     os.environ['KMP_DUPLICATE_LIB_OK']='True'

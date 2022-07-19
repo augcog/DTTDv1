@@ -22,12 +22,12 @@ import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
 from torch.autograd import Variable
-from datasets.ycb.dataset import YCBSemanticSegDatasetWithIntr as SegDataset_ycb
+from datasets.ak_ip.dataset import SegDataset
 from lib.randlanet import SegNet
 from lib.loss import Loss
 from lib.utils import setup_logger
 from lib.randla_utils import randla_processing
-from cfg.config import YCBConfig as Config, write_config
+from cfg.config import AKIPConfig as Config, write_config
 from torch.optim.lr_scheduler import CyclicLR, CosineAnnealingLR, ExponentialLR
 import cv2
 
@@ -42,12 +42,10 @@ opt = parser.parse_args()
 
 cfg = Config()
 
-def project_points(pts, cam_fx, cam_fy, cam_cx, cam_cy):
-    proj_mat = np.array([[cam_fx, 0, cam_cx], [0, cam_fy, cam_cy], [0, 0, 1]])
-    projected_pts = pts @ proj_mat.T
-    projected_pts /= np.expand_dims(projected_pts[:,2], -1)
-    projected_pts = projected_pts[:,:2]
-    return projected_pts
+def project_points(pts, intr, dist):
+    pts_projected, _ = cv2.projectPoints(pts, np.zeros(3), np.zeros(3), intr, dist)
+    pts_projected = np.round(pts_projected.squeeze(1)).astype(int)
+    return pts_projected
 
 colors = [(255, 255, 255), (51, 102, 255), (153, 51, 255), (204, 0, 204), (255, 204, 0), (153, 204, 0)
             , (0, 102, 102), (51, 102, 0), (153, 0, 204), (102, 0, 51), (102, 255, 255), (102, 255, 153)
@@ -68,11 +66,11 @@ def main():
     estimator.cuda()
     estimator.load_state_dict(torch.load('{0}'.format(opt.model)))
 
-    workers=1
+    workers = 1
     bs = 1
 
     optimizer = optim.Adam(estimator.parameters(), lr=cfg.lr)
-    test_dataset = SegDataset_ycb('train', cfg = cfg)
+    test_dataset = SegDataset('test', cfg = cfg, return_intr=True)
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=bs, shuffle=False, num_workers=workers)
 
     print('>>>>>>>>----------Dataset loaded!---------<<<<<<<<\nlength of the testing set: {0}\n'.format(len(test_dataset)))
@@ -89,14 +87,20 @@ def main():
 
             print("frame: {0}".format(now))
 
-            color_img_file = '{0}/{1}-color.png'.format(cfg.root, test_dataset.list[now])
+            color_img_file = os.path.join(test_dataset.data_dir, test_dataset.data_list[now] + "_color.png")
             color_img = cv2.imread(color_img_file)
             color_img_2 = cv2.imread(color_img_file)
 
             torch.cuda.empty_cache()
 
             intr = end_points["intr"]
+            dist = end_points["dist"]
+
             del end_points["intr"]
+            del end_points["dist"]
+
+            intr = intr.squeeze(0).detach().cpu().numpy()
+            dist = dist.squeeze(0).detach().cpu().numpy()
 
             end_points_cuda = {}
             for k, v in end_points.items():
@@ -118,8 +122,7 @@ def main():
             preds = end_points["preds"].squeeze(0).detach().cpu().numpy()
             pts = end_points["cloud"] + end_points["cloud_mean"]
             pts = pts.squeeze(0).detach().cpu().numpy()
-            cam_fx, cam_fy, cam_cx, cam_cy = [x.item() for x in intr]
-            projected_pts = project_points(pts, cam_fx, cam_fy, cam_cx, cam_cy)
+            projected_pts = project_points(pts, intr, dist)
 
             gt_seg = end_points["gt_seg"].squeeze().detach().cpu().numpy()
             

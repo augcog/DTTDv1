@@ -5,7 +5,7 @@ class ConfigRandLA:
     def __init__(self):
         self.k_n = 32  # KNN
         self.num_layers = 2  # Number of layers
-        self.num_classes = 22  # Number of valid classes
+        self.num_classes = 13  # Number of valid classes
 
         self.sub_sampling_ratio = [4, 4]  # sampling ratio of random sampling at each layer
         self.d_out = [32, 64]  # feature dimension
@@ -20,8 +20,8 @@ class Config(yaml.YAMLObject):
         self.use_colors = True #use colors for pcld features
 
         self.old_batch_mode = False #old_batch_mode = accumulate gradients
-        self.batch_size = 1
-        self.workers = 1
+        self.batch_size = 8
+        self.workers = 8
 
         self.decay_margin = 0.015
         self.refine_margin = 0.000015 #refine margin should be less than or equal to decay margin (want decay to trigger first)
@@ -70,7 +70,7 @@ class AKIPConfig(Config):
     def __init__(self):
         super().__init__()
 
-        self.root = "./datasets/ak_ip/root"
+        self.root = "G:/root"
 
         self.num_objects = 12
         self.num_points = 640 * 480 // 24

@@ -59,7 +59,7 @@ def project_depth(depth, depth_scale, intrinsic, distortion, prune_zero=True):
     return pts_xyz
 
 class SegDataset(data.Dataset):
-    def __init__(self, mode, cfg):
+    def __init__(self, mode, cfg, return_intr=False):
 
         self.cfg = cfg
 
@@ -85,6 +85,7 @@ class SegDataset(data.Dataset):
 
         self.mode = mode
         self.trancolor = transforms.ColorJitter(0.2, 0.2, 0.2, 0.05)
+        self.return_intr = return_intr
 
     def __getitem__(self, index):
         item = self.data_list[index]
@@ -155,6 +156,11 @@ class SegDataset(data.Dataset):
         if self.cfg.use_colors:
             end_points["cloud_colors"] = torch.from_numpy(pcld_rgb.astype(np.float32))
         end_points["gt_seg"] = torch.from_numpy(label.astype(np.int64))
+
+        if self.return_intr:
+            end_points["intr"] = torch.from_numpy(camera_intr.astype(np.float32))
+            end_points["dist"] = torch.from_numpy(camera_dist.astype(np.float32))
+
 
         return end_points
 
