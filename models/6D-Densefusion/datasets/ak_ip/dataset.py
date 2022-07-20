@@ -266,6 +266,8 @@ class PoseDataset(data.Dataset):
         item_abs = os.path.join(self.data_dir, item)
         scene_name = item[:item.find("/")]
 
+        print(item)
+
         img = Image.open(item_abs + "_color.png")
         depth = np.array(Image.open(item_abs + "_depth.png"))
         label = np.array(Image.open(item_abs + "_label.png"))
@@ -371,8 +373,8 @@ class PoseDataset(data.Dataset):
 
 
 border_list = [-1, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560, 600, 640, 680]
-img_width = 480
-img_length = 640
+img_height = 720
+img_width = 1280
 
 def get_bbox_posecnn(posecnn_rois, idx):
     rmin = int(posecnn_rois[idx][3]) + 1
@@ -402,13 +404,13 @@ def get_bbox_posecnn(posecnn_rois, idx):
         delt = -cmin
         cmin = 0
         cmax += delt
-    if rmax > img_width:
-        delt = rmax - img_width
-        rmax = img_width
+    if rmax > img_height:
+        delt = rmax - img_height
+        rmax = img_height
         rmin -= delt
-    if cmax > img_length:
-        delt = cmax - img_length
-        cmax = img_length
+    if cmax > img_width:
+        delt = cmax - img_width
+        cmax = img_width
         cmin -= delt
     return rmin, rmax, cmin, cmax
 
@@ -442,12 +444,12 @@ def get_bbox(label):
         delt = -cmin
         cmin = 0
         cmax += delt
-    if rmax > img_width:
-        delt = rmax - img_width
-        rmax = img_width
+    if rmax > img_height:
+        delt = rmax - img_height
+        rmax = img_height
         rmin -= delt
-    if cmax > img_length:
-        delt = cmax - img_length
-        cmax = img_length
+    if cmax > img_width:
+        delt = cmax - img_width
+        cmax = img_width
         cmin -= delt
     return rmin, rmax, cmin, cmax
