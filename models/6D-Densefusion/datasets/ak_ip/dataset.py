@@ -266,8 +266,6 @@ class PoseDataset(data.Dataset):
         item_abs = os.path.join(self.data_dir, item)
         scene_name = item[:item.find("/")]
 
-        print(item)
-
         img = Image.open(item_abs + "_color.png")
         depth = np.array(Image.open(item_abs + "_depth.png"))
         label = np.array(Image.open(item_abs + "_label.png"))
