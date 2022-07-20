@@ -155,8 +155,6 @@ class PoseDataset(data.Dataset):
 
         img = np.array(img)[:, :, :3][rmin:rmax, cmin:cmax,:]
 
-        orig_img = img
-
         img = np.transpose(img, (2, 0, 1))
         img_masked = img
 
@@ -253,7 +251,6 @@ class PoseDataset(data.Dataset):
         end_points["model_points"] = torch.from_numpy(model_points.astype(np.float32))
         end_points["front"] = torch.from_numpy(front.astype(np.float32))
         end_points["obj_idx"] = torch.LongTensor([int(obj_idx) - 1])
-        end_points["cropped_image"] = orig_img
 
         if return_intr:
             end_points["intr"] = (cam_intr, cam_dist)
