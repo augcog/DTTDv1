@@ -50,5 +50,11 @@ Final dataset output:
 	 6. Generate per frame object poses (`tools/generate_scene_labeling.py`)<br>
 	 Example: <code>python tools/generate_scene_labeling.py [SCENE_NAME]</code>
 
+
+# Minutia
+ * Extrinsic scenes have their color images inside of `data` stored as `png`. This is to maximize performance. Data scenes have their color images inside of `data` stored as `jpg`. This is necessary so the dataset remains usable.
+ * iPhone spits out `jpg` raw color images, while Azure Kinect skips out `png` raw color images.
+
+
 # Todo: Model Evaluation for this dataset
 Select SOTA pose estimation & image segmentation models and perform evaluations according to certain metrics.

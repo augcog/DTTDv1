@@ -8,7 +8,7 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from utils.constants import SCENES_DIR
+from utils.constants import AZURE_KINECT_COLOR_HEIGHT, AZURE_KINECT_COLOR_WIDTH, SCENES_DIR
 from utils.frame_utils import load_bgr, load_label
 
 def main():
@@ -28,11 +28,9 @@ def main():
 
     num_frames = scene_metadata["num_frames"]
 
-    h = 720
-    w = 1280
 
     for frame_id in tqdm(range(num_frames), total=num_frames):
-        color_img = load_bgr(frames_dir, frame_id)
+        color_img = load_bgr(frames_dir, frame_id, "jpg")
         label = load_label(frames_dir, frame_id)
 
         label *= 3000
@@ -46,7 +44,7 @@ def main():
 
         out_arr.append(out)
 
-    size = (w * 2, h)
+    size = (AZURE_KINECT_COLOR_WIDTH * 2, AZURE_KINECT_COLOR_HEIGHT)
 
     fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
     out_vid = cv2.VideoWriter(os.path.join(dir_path, '..', 'demos' , '{0}.mp4'.format(args.scene_name)), fourcc, 15, size)

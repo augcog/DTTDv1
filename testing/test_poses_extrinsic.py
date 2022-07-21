@@ -70,7 +70,7 @@ def main():
         
         opti_poses = [p[frame_id] for p in poses]
 
-        frame = load_bgr(frames_dir, frame_id)
+        frame = load_bgr(frames_dir, frame_id, "png")
         frames = [np.copy(frame) for _ in range(len(poses))]
 
         sensor_to_optis = [opti_pose @ invert_affine(extrinsic) for opti_pose in opti_poses]
@@ -104,7 +104,7 @@ def main():
         sensor_to_arucos = [opti_to_aruco @ sensor_to_opti for sensor_to_opti in sensor_to_optis]
         aruco_to_sensors = [invert_affine(sensor_to_aruco) for sensor_to_aruco in sensor_to_arucos]
 
-        frame = load_bgr(frames_dir, frame_id)
+        frame = load_bgr(frames_dir, frame_id, "png")
         depth = load_depth(frames_dir, frame_id)
 
         aruco_pose = calculate_aruco_from_bgr_and_depth(frame, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients, aruco_dict, parameters)

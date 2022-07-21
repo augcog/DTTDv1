@@ -64,7 +64,7 @@ class SemanticLabelingGenerator():
         #use first frame coordinate system as world coordinates
         for frame_id, sensor_pose in tqdm(synchronized_poses_corrected.items(), total=len(synchronized_poses_corrected)):
 
-            rgb = load_rgb(frames_dir, frame_id)
+            rgb = load_rgb(frames_dir, frame_id, "jpg")
             h, w, _ = rgb.shape
 
             sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ sensor_pose
@@ -74,7 +74,7 @@ class SemanticLabelingGenerator():
             label_out = np.zeros((h, w, len(object_pcld_transformed))).astype(np.uint16)
             depth_out = np.ones_like(label_out).astype(np.float32) * 10000 #inf depth
 
-            bgr = load_bgr(frames_dir, frame_id)
+            bgr = load_bgr(frames_dir, frame_id, "jpg")
 
             objects_in_sensor_coords = []
 
@@ -166,7 +166,7 @@ class SemanticLabelingGenerator():
         #use first frame coordinate system as world coordinates
         for frame_id in tqdm(range(num_frames), total=num_frames):
 
-            rgb = load_rgb(frames_dir, frame_id)
+            rgb = load_rgb(frames_dir, frame_id, "jpg")
             h, w, _ = rgb.shape
 
             frame_meta = load_meta(frames_dir, frame_id)
@@ -184,7 +184,7 @@ class SemanticLabelingGenerator():
             label_out = np.zeros((h, w, len(objects_in_sensor_coords))).astype(np.uint16)
             depth_out = np.ones_like(label_out).astype(np.float32) * 10000 #inf depth
 
-            bgr = load_bgr(frames_dir, frame_id)
+            bgr = load_bgr(frames_dir, frame_id, "jpg")
             
             for idx, (obj_id, obj_pts_in_sensor_coordinates) in enumerate(objects_in_sensor_coords.items()):
 

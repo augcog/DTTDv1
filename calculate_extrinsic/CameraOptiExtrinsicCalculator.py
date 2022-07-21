@@ -74,7 +74,7 @@ class CameraOptiExtrinsicCalculator():
         parameters = cv2.aruco.DetectorParameters_create()
 
         for frame_id, opti_pose in tqdm(synchronized_poses.items(), total=len(synchronized_poses), desc="Finding ARUCO"):
-            frame = load_bgr(frames_dir, frame_id)
+            frame = load_bgr(frames_dir, frame_id, "png")
             depth = load_depth(frames_dir, frame_id)
 
             aruco_pose = calculate_aruco_from_bgr_and_depth(frame, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients, aruco_dict, parameters)
@@ -167,7 +167,7 @@ class CameraOptiExtrinsicCalculator():
         sensor_to_virtual = invert_affine(extrinsic)
 
         for frame_id, opti_pose in synchronized_poses.items():
-            frame = load_bgr(frames_dir, frame_id)
+            frame = load_bgr(frames_dir, frame_id, "png")
             frame_2 = np.copy(frame)
 
             sensor_to_opti = opti_pose @ invert_affine(extrinsic)

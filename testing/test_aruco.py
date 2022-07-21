@@ -7,7 +7,7 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth, load_rgb
+from utils.frame_utils import calculate_aruco_from_bgr_and_depth, get_color_ext, load_bgr, load_depth, load_rgb, get_color_ext
 
 if __name__ == "__main__":
 
@@ -36,6 +36,9 @@ if __name__ == "__main__":
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
 
+    if args.frame_dir:
+        frame_ext = get_color_ext(args.frame_dir)
+
     while True:
         if not args.frame_dir:
             # Get capture
@@ -49,8 +52,8 @@ if __name__ == "__main__":
             rgb = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
         else:
             try:
-                color_image = load_bgr(args.frame_dir, img_id)
-                rgb = load_rgb(args.frame_dir, img_id)
+                color_image = load_bgr(args.frame_dir, img_id, frame_ext)
+                rgb = load_rgb(args.frame_dir, img_id, frame_ext)
                 depth_image = load_depth(args.frame_dir, img_id)
             except:
                 print("out of frames at id {0}".format(img_id))

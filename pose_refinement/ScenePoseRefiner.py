@@ -99,7 +99,7 @@ class ScenePoseRefiner():
             #use first frame coordinate system as world coordinates
             for frame_id, sensor_pose in tqdm(synchronized_poses_corrected.items(), total=len(synchronized_poses_corrected), desc="icp computing refinement"):
                 
-                rgb = load_rgb(frames_dir, frame_id)
+                rgb = load_rgb(frames_dir, frame_id, "jpg")
                 depth = load_depth(frames_dir, frame_id)
 
                 sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ sensor_pose
@@ -148,7 +148,7 @@ class ScenePoseRefiner():
                     obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
                     all_objs_in_sensor_coordinates.append(obj_in_sensor_coordinates)
 
-                bgr = load_bgr(frames_dir, frame_ids[frame_ids_idx])
+                bgr = load_bgr(frames_dir, frame_ids[frame_ids_idx], "jpg")
                 
                 for idx, obj_pcld_in_sensor_coordinates in enumerate(all_objs_in_sensor_coordinates):
 

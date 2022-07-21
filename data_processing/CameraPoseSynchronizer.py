@@ -15,7 +15,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 from calculate_extrinsic import CameraOptiExtrinsicCalculator
 from utils.camera_utils import load_intrinsics, load_distortion
 from utils.depth_utils import filter_depths_valid_percentage
-from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, write_bgr, load_depth, write_depth
+from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth, transfer_color, transfer_depth, get_color_ext
 
 class CameraPoseSynchronizer():
     def __init__(self):
@@ -34,7 +34,7 @@ class CameraPoseSynchronizer():
     Frame, camera_Rotation_X,camera_Rotation_Y,camera_Rotation_Z,camera_Rotation_W,camera_Position_X,camera_Position_Y,camera_Position_Z
     """
     @staticmethod
-    def synchronize_camera_poses_and_frames(scene_dir, cleaned_opti_poses, show_sync_plot=True, write_to_file=False, rewrite_images=True):
+    def synchronize_camera_poses_and_frames(scene_dir, cleaned_opti_poses, show_sync_plot=True, write_to_file=False, rewrite_images=True, to_jpg=True):
 
         camera_data_csv = os.path.join(scene_dir, "camera_data.csv")
         camera_time_break_csv = os.path.join(scene_dir, "camera_time_break.csv")
@@ -58,6 +58,7 @@ class CameraPoseSynchronizer():
         camera_distortion = load_distortion(camera_name)
 
         raw_frames_dir = os.path.join(scene_dir, "data_raw")
+        raw_frames_ext = get_color_ext(raw_frames_dir)
 
         time_break = pd.read_csv(camera_time_break_csv)
         calibration_start_frame_id, calibration_end_frame_id, capture_start_frame_id = time_break["Calibration Start ID"].iloc[0], time_break["Calibration End ID"].iloc[0], time_break["Capture Start ID"].iloc[0]
@@ -96,7 +97,7 @@ class CameraPoseSynchronizer():
 
         def calculate_virtual_to_opti(row):
             
-            color_image = load_bgr(raw_frames_dir, int(row["Frame"]))
+            color_image = load_bgr(raw_frames_dir, int(row["Frame"]), raw_frames_ext)
             depth = load_depth(raw_frames_dir, int(row["Frame"]))
 
             aruco_pose = calculate_aruco_from_bgr_and_depth(color_image, depth, cam_scale, camera_intrinsics, camera_distortion, dictionary, parameters)
@@ -253,14 +254,14 @@ class CameraPoseSynchronizer():
         new_frame_id = 0
 
         if rewrite_images:
+
+            new_frame_ext = "jpg" if to_jpg else "png"
+
             for _, row in tqdm(synced_df_renumbered.iterrows(), total=synced_df_renumbered.shape[0], desc="Writing Renumbered Frames"):
                 old_frame_id = int(row["Frame"])
 
-                bgr = load_bgr(raw_frames_dir, old_frame_id)
-                depth = load_depth(raw_frames_dir, old_frame_id)
-
-                write_bgr(output_frames_dir, new_frame_id, bgr)
-                write_depth(output_frames_dir, new_frame_id, depth)
+                transfer_color(raw_frames_dir, old_frame_id, raw_frames_ext, output_frames_dir, new_frame_id, new_frame_ext)
+                transfer_depth(raw_frames_dir, old_frame_id, output_frames_dir, new_frame_id)
 
                 new_frame_id += 1
 

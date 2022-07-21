@@ -86,7 +86,7 @@ def main():
     frame_id = 0
 
     sensor_pose = synchronized_poses_corrected[frame_id]
-    rgb = load_rgb(frames_dir, frame_id)
+    rgb = load_rgb(frames_dir, frame_id, "jpg")
     depth = load_depth(frames_dir, frame_id)
     h, w, _ = rgb.shape
 

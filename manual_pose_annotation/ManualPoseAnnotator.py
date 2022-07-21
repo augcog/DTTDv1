@@ -165,7 +165,7 @@ class ManualPoseAnnotator:
         camera_distortion_coefficients = load_distortion(camera_name)
         camera_extrinsic = load_extrinsics(camera_name, scene_dir, use_archive=use_archive_extrinsic)
 
-        rgb = load_rgb(frames_dir, frameid)
+        rgb = load_rgb(frames_dir, frameid, "jpg")
         depth = load_depth(frames_dir, frameid)
         h, w, _ = rgb.shape
 
@@ -208,7 +208,7 @@ class ManualPoseAnnotator:
             color_type=o3d.integration.TSDFVolumeColorType.RGB8)
 
         for frame_id in range(50):
-            rgb = load_o3d_rgb(frames_dir, frame_id)
+            rgb = load_o3d_rgb(frames_dir, frame_id, "jpg")
             depth = load_o3d_depth(frames_dir, frame_id)
             rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
                 rgb, depth, depth_trunc=max_depth, convert_rgb_to_intensity=False)
@@ -336,7 +336,7 @@ class ManualPoseAnnotator:
             nonlocal camera_representations
 
             new_frameid = (curr_frameid + frame_skip) % num_frames
-            rgb = load_rgb(frames_dir, new_frameid)
+            rgb = load_rgb(frames_dir, new_frameid, "jpg")
             depth = load_depth(frames_dir, new_frameid)
 
             camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
@@ -371,7 +371,7 @@ class ManualPoseAnnotator:
             nonlocal camera_representations
 
             new_frameid = (curr_frameid - frame_skip + num_frames) % num_frames
-            rgb = load_rgb(frames_dir, new_frameid)
+            rgb = load_rgb(frames_dir, new_frameid, "jpg")
             depth = load_depth(frames_dir, new_frameid)
 
             camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
@@ -406,7 +406,7 @@ class ManualPoseAnnotator:
             nonlocal camera_representations
 
             new_frameid = frameid
-            rgb = load_rgb(frames_dir, new_frameid)
+            rgb = load_rgb(frames_dir, new_frameid, "jpg")
             depth = load_depth(frames_dir, new_frameid)
 
             camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
@@ -482,7 +482,7 @@ class ManualPoseAnnotator:
                 for idx in range(len(all_objs_in_sensor_coordinates)):
                     all_objs_in_sensor_coordinates[idx] = all_objs_in_sensor_coordinates[idx].transform(refinement)
 
-            bgr = load_bgr(frames_dir, curr_frameid)
+            bgr = load_bgr(frames_dir, curr_frameid, "jpg")
             
             for idx, obj_pcld_in_sensor_coordinates in enumerate(all_objs_in_sensor_coordinates):
 

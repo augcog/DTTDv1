@@ -19,8 +19,11 @@ TRAIN_TEST_SPLIT_PERCENTAGE = 0.8
 SCENE_NAME = "6d_test_dataset_17_scenes" #modify yourself
 
 def main():
+    
+    #SET CONSISTENT SEED
     random.seed(2022)
     np.random.seed(2022)
+
     parser = argparse.ArgumentParser(description='Generate data roots')
     args = parser.parse_args()
 

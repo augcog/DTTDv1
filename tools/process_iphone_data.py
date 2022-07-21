@@ -1,21 +1,18 @@
 """
 
-Clean camera poses using CameraPoseCleaner.
-Generate synchronized_camera_poses using CameraPoseSynchronizer.
-Fully generates scene directory:
-1) data folder with rgb and depth (numbered 00000 - n)
-2) scene_meta.yaml
+Run this tool on a scene that was recorded using an iPhone 13 instead Azure Kinect prior to process_data.py.
+Converts depth.txt into depth images.
 
 """
 
 import argparse
+import numpy as np
 
 import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from data_processing import CameraPoseCleaner, CameraPoseSynchronizer
-from pose_refinement import OptiKFSmoother
+from data_processing import IPhoneDataProcessor
 from utils.constants import EXTRINSICS_DIR, SCENES_DIR
 from utils.datetime_utils import get_latest_str_from_str_time_list
 
@@ -23,9 +20,6 @@ def main():
     parser = argparse.ArgumentParser(description='Synchronize optitrack poses with frames')
     parser.add_argument('--scene_name', type=str, help='name of scene')
     parser.add_argument('--extrinsic', default=False, action="store_true", help='processing a extrinsic scene')
-    parser.add_argument('--rewrite_images', action='store_true')
-    parser.add_argument('--no-rewrite-images', dest='rewrite_images', action='store_false')
-    parser.set_defaults(rewrite_images=True)
     args = parser.parse_args()
 
     if not args.scene_name and not args.extrinsic:
@@ -44,26 +38,9 @@ def main():
     else:
         scene_dir = os.path.join(SCENES_DIR, args.scene_name)
 
-    cam_pose_cleaner = CameraPoseCleaner()
-    cleaned_poses = cam_pose_cleaner.clean_camera_pose_file(scene_dir, write_cleaned_to_file=True)
-
-    print("Poses cleaned!")
-
-    cam_pose_smoother = OptiKFSmoother()
-    smoothed_poses = cam_pose_smoother.smooth_opti_poses_kf(scene_dir, cleaned_poses, write_smoothed_to_file=True)
-
-    print("Poses smoothed!")
-
-    #For data scenes, we want to save RGB as jpeg to save space
-    if args.extrinsic:
-        to_jpg = False
-    else:
-        to_jpg = True
-
-    cam_pose_synchronizer = CameraPoseSynchronizer()
-    cam_pose_synchronizer.synchronize_camera_poses_and_frames(scene_dir, smoothed_poses, write_to_file=True, rewrite_images = args.rewrite_images, to_jpg = to_jpg)
-
-    print("Poses synchronized!")
+    iphone_data_processing = IPhoneDataProcessor()
+    iphone_data_processing.process_iphone_scene_data(scene_dir)
+    
 
 if __name__ == "__main__":
     main()

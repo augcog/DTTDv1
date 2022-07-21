@@ -55,7 +55,7 @@ class AzureKinectDataCapturer():
         cv2.imshow("Color Image", color_image)
         cv2.imshow("Depth Image", depth_image)
 
-        write_bgr(frames_dir, frame_id, color_image)
+        write_bgr(frames_dir, frame_id, color_image, "png")
         write_depth(frames_dir, frame_id, depth_image)
 
         data_file.write("{0},{1}\n".format(frame_id, cur_timestamp))
