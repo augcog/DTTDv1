@@ -121,17 +121,21 @@ class ScenePoseRefiner():
                 #2 -> 1, 1 -> opti = 2 -> opti
                 synchronized_poses_refined[frame_id] = sensor_pose @ invert_affine(pose_refinement_icp)
         else:
-            synchronized_poses_refined = synchronized_poses_corrected
+            synchronized_poses_refined = {k: np.copy(v) for k, v in synchronized_poses_corrected.items()}
 
         if manual_refine: 
 
             #State
-            frame_ids = sorted(list(synchronized_poses_refined.keys()))
+            frame_ids = [id for id in sorted(list(synchronized_poses_refined.keys())) if id != annotated_poses_single_frameid]
             frame_ids_idx = 0
 
             frame_pose = synchronized_poses_refined[frame_ids[frame_ids_idx]]
             sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ frame_pose
             current_pose = invert_affine(sensor_pose_in_annotated_coordinates)
+
+            current_refinement = np.eye(4)
+
+            show_objects = True
 
             object_meshes = {}
             for obj_id, obj in self._objects.items():
@@ -140,6 +144,7 @@ class ScenePoseRefiner():
                 object_meshes[obj_id] = obj_mesh
 
             colors = [(80, 225, 116), (74, 118, 56), (194, 193, 120), (176, 216, 249), (214, 251, 255)]
+
             def render_current_view():
 
                 all_objs_in_sensor_coordinates = []
@@ -149,20 +154,23 @@ class ScenePoseRefiner():
                     all_objs_in_sensor_coordinates.append(obj_in_sensor_coordinates)
 
                 bgr = load_bgr(frames_dir, frame_ids[frame_ids_idx], "jpg")
-                
-                for idx, obj_pcld_in_sensor_coordinates in enumerate(all_objs_in_sensor_coordinates):
 
-                    obj_pts_in_sensor_coordinates = np.array(obj_pcld_in_sensor_coordinates.points)
+                if show_objects:
+                    for idx, obj_pcld_in_sensor_coordinates in enumerate(all_objs_in_sensor_coordinates):
 
-                    #(Nx2)
-                    obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics, camera_distortion)
-                    obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
+                        obj_pts_in_sensor_coordinates = np.array(obj_pcld_in_sensor_coordinates.points)
 
-                    for pt_x, pt_y in obj_pts_projected:
-                        bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 1, color=colors[idx % len(colors)], thickness=-1)
+                        #(Nx2)
+                        obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics, camera_distortion)
+                        obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
+
+                        for pt_x, pt_y in obj_pts_projected:
+                            bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 1, color=colors[idx % len(colors)], thickness=-1)
 
                 return bgr
 
+            print("frame: {0}".format(frame_ids[frame_ids_idx]))
+            
             cv2.namedWindow("rendered frame")
             cv2.imshow("rendered frame", render_current_view())
 
@@ -181,6 +189,11 @@ class ScenePoseRefiner():
 
                 cv2.imshow("rendered frame", render_current_view())
 
+            def toggle_vis():
+                nonlocal show_objects
+                show_objects = not show_objects
+                update_objects()
+
     #------------------------------------------------------------------------------------------
             def increment_frame_id():
                 nonlocal frame_ids_idx
@@ -188,6 +201,9 @@ class ScenePoseRefiner():
 
                 frame_ids_idx += 1
                 frame_ids_idx = frame_ids_idx % len(frame_ids)
+
+                synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] = synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] @ current_refinement[:3,:3]
+                synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,3] += current_refinement[:3,3]
 
                 print("frame: {0}".format(frame_ids[frame_ids_idx]))
             
@@ -206,9 +222,13 @@ class ScenePoseRefiner():
             last_rot_type = ""
 
             def rotate_using_euler(euler):
+                nonlocal current_refinement
                 nonlocal synchronized_poses_refined
+
                 delta_rot_mat = R.from_euler("XYZ", euler).as_matrix()
-                synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] = synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] @ delta_rot_mat.T
+
+                synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] = delta_rot_mat @ synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] @ delta_rot_mat.T
+                current_refinement[:3,:3] = current_refinement[:3,:3] @ delta_rot_mat.T
 
                 update_objects()
 
@@ -267,8 +287,12 @@ class ScenePoseRefiner():
             last_translation_type = ""
 
             def translate(trans):
+                nonlocal current_refinement
                 nonlocal synchronized_poses_refined
+
                 synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,3] += synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] @ trans
+                current_refinement[:3,3] += synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] @ trans
+
                 update_objects()
 
             def update_translation_delta(translation_type):
@@ -322,14 +346,15 @@ class ScenePoseRefiner():
                 elif k == 13: #enter
                     increment_frame_id()
                 elif k == ord('r'):
-                    synchronized_poses_refined[frame_ids[frame_ids_idx]] = synchronized_poses_corrected[frame_ids[frame_ids_idx]]
+                    synchronized_poses_refined[frame_ids[frame_ids_idx]] = np.copy(synchronized_poses_corrected[frame_ids[frame_ids_idx]])
+                    current_refinement = np.eye(4)
                 elif k == ord('u'):
                     increase_rotation_alpha()
                 elif k == ord('i'):
                     decrease_rotation_alpha()
-                elif k == ord('o'):
-                    increase_rotation_beta()
                 elif k == ord('p'):
+                    increase_rotation_beta()
+                elif k == ord('o'):
                     decrease_rotation_beta()
                 elif k == ord('k'):
                     increase_rotation_gamma()
@@ -343,10 +368,12 @@ class ScenePoseRefiner():
                     increase_z()
                 elif k == ord('s'):
                     decrease_z()
-                elif k == ord('d'):
-                    decrease_x()
                 elif k == ord('a'):
+                    decrease_x()
+                elif k == ord('d'):
                     increase_x()
+                elif k == ord('1'):
+                    toggle_vis()
 
         # change of coordinates for synchronized poses from:
         # (sensor -> opti) back to (virtual -> opti)

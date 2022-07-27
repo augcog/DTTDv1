@@ -28,3 +28,13 @@ def rotvec_trans_from_affine_matrix(aff):
     trans = aff[:3,3]
     rotvec = R.from_matrix(rot_mat).as_rotvec()
     return rotvec, trans
+
+def affine_matrix_from_rot_mat(rot_mat):
+    aff = np.eye(4)
+    aff[:3,:3] = rot_mat
+    return aff
+
+def affine_matrix_from_trans(trans):
+    aff = np.eye(4)
+    aff[:3,3] = trans
+    return aff
