@@ -194,6 +194,34 @@ class ScenePoseRefiner():
                 update_objects()
 
     #------------------------------------------------------------------------------------------
+            def render_side_view():
+                all_objs_and_colors_in_sensor_coordinates = []
+
+                for idx, (obj_id, obj_mesh) in enumerate(object_meshes.items()):
+                    obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
+                    all_objs_and_colors_in_sensor_coordinates.append(obj_in_sensor_coordinates, colors[idx % len(colors)])
+
+                bgr = load_bgr(frames_dir, frame_ids[frame_ids_idx], "jpg")
+                pcld_in_sensor_coordinates = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics, camera_distortion, prune_zero=True)
+
+                #side view is a camera off to the right, looking left
+                cam2_in_cam1 = np.array([[0, 0, -1, 1], [0, 1, 0, 0], [1, 0, 0, 1.5], [0, 0, 0, 1]])
+
+                pcld_in_cam2_coordinates = pcld_in_sensor_coordinates @ cam2_in_cam1[:3,:3] + cam2_in_cam1[:3,3]
+
+                out = np.zeros_like(bgr)
+
+                scene_pcld_projected, _ = cv2.projectPoints(pcld_in_cam2_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics, camera_distortion)
+                scene_pcld_projected = np.round(scene_pcld_projected.squeeze(1)).astype(int)
+
+                for pt_x, pt_y in scene_pcld_projected:
+                    out = cv2.circle(out, (int(pt_x), int(pt_y)), 1, color=colors[idx % len(colors)], thickness=-1)
+
+                cv2.imshow("side view", out)
+                cv2.waitKey(500)
+                cv2.destroyWindow("side view")
+
+    #------------------------------------------------------------------------------------------
 
             #ROTATION STUFF
 
