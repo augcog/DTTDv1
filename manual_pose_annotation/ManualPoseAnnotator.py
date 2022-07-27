@@ -241,7 +241,7 @@ class ManualPoseAnnotator:
         show_all_objects = True
 
         curr_frameid = frameid
-        frame_skip = 20
+        frame_skip = 6
         
         for obj_id, obj_data in self._objects.items():
             obj_mesh = obj_data["mesh"]
