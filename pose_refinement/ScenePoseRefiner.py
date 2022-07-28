@@ -352,7 +352,7 @@ class ScenePoseRefiner():
                 synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] = synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] @ current_refinement[:3,:3]
                 synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,3] += current_refinement[:3,3]
 
-                print("frame: {0}".format(frame_ids[frame_ids_idx]))
+                print("frame: {0} / {1}".format(frame_ids[frame_ids_idx], len(frame_ids)))
             
                 update_objects()
 
