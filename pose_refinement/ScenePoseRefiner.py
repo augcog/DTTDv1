@@ -338,7 +338,7 @@ class ScenePoseRefiner():
             def toggle_bb_vis():
                 nonlocal show_bb
                 show_bb = not show_bb
-                
+
                 cv2.imshow("rendered frame", render_current_view())
                 render_alt_views()
 
@@ -374,8 +374,8 @@ class ScenePoseRefiner():
 
                 delta_rot_mat = R.from_euler("XYZ", euler).as_matrix()
 
-                synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] = delta_rot_mat @ synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] @ delta_rot_mat.T
-                current_refinement[:3,:3] = current_refinement[:3,:3] @ delta_rot_mat.T
+                synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] = synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] @ delta_rot_mat
+                current_refinement[:3,:3] = current_refinement[:3,:3] @ delta_rot_mat
 
                 update_objects()
 
@@ -399,7 +399,7 @@ class ScenePoseRefiner():
             def decrease_rotation_alpha():
                 update_rotation_delta("decA")
                 euler = np.array([-rotation_delta, 0, 0])
-                rotate_using_euler( euler)
+                rotate_using_euler(euler)
 
             def increase_rotation_beta():
                 update_rotation_delta("incB")
