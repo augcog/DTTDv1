@@ -118,7 +118,7 @@ class AnnotationReviewer():
             cv2.destroyWindow("overlayed label")
 
             print("Go through scene again? (y/n)")
-            if input() == "y":
+            if input().lower() == "y":
                 continue
             else:
                 break
