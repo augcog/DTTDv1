@@ -103,7 +103,7 @@ Uses the manual annotated poses for a single frame to generate semantic segmenta
  4. `--fast`: Project fewer points onto the camera frame from each object. This will result in a much more sparse output, but runs much faster. If this flag isn't used, the runtime is between 20 minutes to an hour. If this flag is used, the runtime is less than 3 minutes. Use this flag when testing. Don't use this flag for final label output.
  5. `--use-prev-obj-pose`: Use the object poses within each frame's metadata in order to generate the labeling. This is recommended after running the algorithm once with `--refine` and `--fast`. Basically, this uses a previously calculated camera pose refinement. Setting this flag means all other flags regarding refinement are ignored (since the object poses are determined from the frame metadata and not computed).
  6. `--use-prev-refinement`: Use the previous refinement results as the synchronized poses.
- 7. `--icp_refine`: Perform an ICP refinement phase if `refine` is set to True. (Defaults to False).
+ 7. `--icp_refine`: Perform an ICP refinement phase if `refine` is set to True. (Defaults to True).
  8. `--no-icp-refine`: Skip the ICP refinement phase if `refine` is set to True. Recommended if using `--use-prev-refinement`, and the previous refinement already ran an ICP phase.
 
 ### Outputs

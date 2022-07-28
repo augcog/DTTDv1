@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--fast', default=False, action='store_true')
     parser.add_argument('--use-prev-refinement', default=False, action='store_true')
     parser.add_argument('--use-prev-obj-poses', default=False, action='store_true', help='use the object poses created during a previous call to this tool to generate semantic segmentations only.')
-    parser.set_defaults(refine=True, icp_refine=False)
+    parser.set_defaults(refine=True, icp_refine=True)
 
     args = parser.parse_args()
 
