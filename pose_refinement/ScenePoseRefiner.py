@@ -18,7 +18,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 from utils.affine_utils import invert_affine
 from utils.camera_utils import load_distortion, load_extrinsics, load_intrinsics
 from utils.frame_utils import load_depth, load_rgb, load_bgr
-from utils.pointcloud_utils import pointcloud_from_rgb_depth
+from utils.pointcloud_utils import apply_affine_to_points, pointcloud_from_rgb_depth
 from utils.pose_dataframe_utils import convert_pose_dict_to_df
 
 class ScenePoseRefiner():
@@ -137,26 +137,32 @@ class ScenePoseRefiner():
 
             show_objects = True
 
-            object_meshes = {}
+            object_meshes_and_bbs = {}
             for obj_id, obj in self._objects.items():
+
                 annotated_obj_pose = annotated_poses_single_frame[obj_id]
+
+                obj_bb = obj["mesh"].get_axis_aligned_bounding_box()
+                obj_bb_pts = np.array(obj_bb.get_box_points())
+                obj_bb_pts = apply_affine_to_points(obj_bb_pts, annotated_obj_pose)
+
                 obj_mesh = obj["mesh"].transform(current_pose @ annotated_obj_pose)
-                object_meshes[obj_id] = obj_mesh
+                object_meshes_and_bbs[obj_id] = (obj_mesh, obj_bb_pts)
 
             colors = [(80, 225, 116), (74, 118, 56), (194, 193, 120), (176, 216, 249), (214, 251, 255)]
 
             def render_current_view():
 
-                all_objs_in_sensor_coordinates = []
+                objs_and_bbs_in_sensor_coords = []
 
-                for idx, (obj_id, obj_mesh) in enumerate(object_meshes.items()):
+                for idx, (obj_id, (obj_mesh, obj_bb)) in enumerate(object_meshes_and_bbs.items()):
                     obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
-                    all_objs_in_sensor_coordinates.append(obj_in_sensor_coordinates)
+                    objs_and_bbs_in_sensor_coords.append((obj_in_sensor_coordinates, obj_bb))
 
                 bgr = load_bgr(frames_dir, frame_ids[frame_ids_idx], "jpg")
 
                 if show_objects:
-                    for idx, obj_pcld_in_sensor_coordinates in enumerate(all_objs_in_sensor_coordinates):
+                    for idx, (obj_pcld_in_sensor_coordinates, obj_bb) in enumerate(objs_and_bbs_in_sensor_coords):
 
                         obj_pts_in_sensor_coordinates = np.array(obj_pcld_in_sensor_coordinates.points)
 
@@ -167,23 +173,142 @@ class ScenePoseRefiner():
                         for pt_x, pt_y in obj_pts_projected:
                             bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 1, color=colors[idx % len(colors)], thickness=-1)
 
+                        obj_bb_projected, _ = cv2.projectPoints(obj_bb, np.zeros(3), np.zeros(3), camera_intrinsics, camera_distortion)
+                        bb_proj = np.round(obj_bb_projected.squeeze(1)).astype(int)
+
+                        bgr = cv2.line(bgr, (int(bb_proj[0][0]), int(bb_proj[0][1])), (int(bb_proj[1][0]), int(bb_proj[1][1])), color=(0,0,0), thickness=1)
+                        bgr = cv2.line(bgr, (int(bb_proj[0][0]), int(bb_proj[0][1])), (int(bb_proj[2][0]), int(bb_proj[2][1])), color=(0,0,0), thickness=1)
+                        bgr = cv2.line(bgr, (int(bb_proj[1][0]), int(bb_proj[1][1])), (int(bb_proj[7][0]), int(bb_proj[7][1])), color=(0,0,0), thickness=1)
+                        bgr = cv2.line(bgr, (int(bb_proj[2][0]), int(bb_proj[2][1])), (int(bb_proj[7][0]), int(bb_proj[7][1])), color=(0,0,0), thickness=1)
+
+                        bgr = cv2.line(bgr, (int(bb_proj[4][0]), int(bb_proj[4][1])), (int(bb_proj[5][0]), int(bb_proj[5][1])), color=(0,0,0), thickness=1)
+                        bgr = cv2.line(bgr, (int(bb_proj[4][0]), int(bb_proj[4][1])), (int(bb_proj[6][0]), int(bb_proj[6][1])), color=(0,0,0), thickness=1)
+                        bgr = cv2.line(bgr, (int(bb_proj[3][0]), int(bb_proj[3][1])), (int(bb_proj[5][0]), int(bb_proj[5][1])), color=(0,0,0), thickness=1)
+                        bgr = cv2.line(bgr, (int(bb_proj[3][0]), int(bb_proj[3][1])), (int(bb_proj[6][0]), int(bb_proj[6][1])), color=(0,0,0), thickness=1)
+
+                        bgr = cv2.line(bgr, (int(bb_proj[0][0]), int(bb_proj[0][1])), (int(bb_proj[3][0]), int(bb_proj[3][1])), color=(0,0,0), thickness=1)
+                        bgr = cv2.line(bgr, (int(bb_proj[1][0]), int(bb_proj[1][1])), (int(bb_proj[6][0]), int(bb_proj[6][1])), color=(0,0,0), thickness=1)
+                        bgr = cv2.line(bgr, (int(bb_proj[2][0]), int(bb_proj[2][1])), (int(bb_proj[5][0]), int(bb_proj[5][1])), color=(0,0,0), thickness=1)
+                        bgr = cv2.line(bgr, (int(bb_proj[7][0]), int(bb_proj[7][1])), (int(bb_proj[4][0]), int(bb_proj[4][1])), color=(0,0,0), thickness=1)
+
                 return bgr
+
+            alt_view_cache = {}
+
+            def render_alt_view(cam2_in_cam1, view):
+
+                if view in alt_view_cache.keys():
+                    return alt_view_cache[view][show_objects]
+
+                objs_bbs_color_in_sensor_coords = []
+
+                for idx, (obj_id, (obj_mesh, obj_bb)) in enumerate(object_meshes_and_bbs.items()):
+                    obj_in_sensor_coordinates = np.array(obj_mesh.sample_points_uniformly(number_of_points=10000).points)
+                    objs_bbs_color_in_sensor_coords.append((obj_in_sensor_coordinates, obj_bb, colors[idx % len(colors)]))
+
+                bgr = load_bgr(frames_dir, frame_ids[frame_ids_idx], "jpg")
+                depth = load_depth(frames_dir, frame_ids[frame_ids_idx])
+
+                pcld_in_sensor_coordinates = pointcloud_from_rgb_depth(bgr, depth, cam_scale, camera_intrinsics, camera_distortion, prune_zero=True)
+                points = np.array(pcld_in_sensor_coordinates.points)
+                pcld_colors = np.array(pcld_in_sensor_coordinates.colors)
+
+                pcld_in_cam2_coordinates = apply_affine_to_points(points, invert_affine(cam2_in_cam1))
+
+                pcld_in_cam2_coordinates = pcld_in_cam2_coordinates.reshape((-1, 3))
+                pcld_colors = (pcld_colors.reshape((-1, 3)) * 255.).astype(int)
+
+                num_pts = pcld_in_cam2_coordinates.shape[0]
+                
+                sampled_pts = np.random.choice(num_pts, 50000, replace=False)
+
+                pcld_in_cam2_coordinates = pcld_in_cam2_coordinates[sampled_pts]
+                pcld_colors = pcld_colors[sampled_pts]
+
+                out = np.zeros_like(bgr)
+
+                scene_pcld_projected, _ = cv2.projectPoints(pcld_in_cam2_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics, camera_distortion)
+                scene_pcld_projected = np.round(scene_pcld_projected.squeeze(1)).astype(int)
+
+                for (pt_x, pt_y), (b, g, r) in zip(scene_pcld_projected, pcld_colors):
+                    out = cv2.circle(out, (int(pt_x), int(pt_y)), 1, color=(int(b), int(g), int(r)), thickness=-1)
+
+                alt_view_cache[view] = {}
+                alt_view_cache[view][False] = np.copy(out)
+
+                for (obj_pts, obj_bb, color) in objs_bbs_color_in_sensor_coords:
+
+                    obj_pts_in_cam2 = apply_affine_to_points(obj_pts, invert_affine(cam2_in_cam1))
+                    obj_bb_in_cam2 = apply_affine_to_points(obj_bb, invert_affine(cam2_in_cam1))
+
+                    obj_pts_in_cam2_projected, _ = cv2.projectPoints(obj_pts_in_cam2, np.zeros(3), np.zeros(3), camera_intrinsics, camera_distortion)
+                    obj_pts_in_cam2_projected = np.round(obj_pts_in_cam2_projected.squeeze(1)).astype(int)
+
+                    for (pt_x, pt_y) in obj_pts_in_cam2_projected:
+                        out = cv2.circle(out, (int(pt_x), int(pt_y)), 1, color=color, thickness=-1)
+
+                    obj_bb_projected, _ = cv2.projectPoints(obj_bb_in_cam2, np.zeros(3), np.zeros(3), camera_intrinsics, camera_distortion)
+                    bb_proj = np.round(obj_bb_projected.squeeze(1)).astype(int)
+
+                    out = cv2.line(out, (int(bb_proj[0][0]), int(bb_proj[0][1])), (int(bb_proj[1][0]), int(bb_proj[1][1])), color=(0,255,100), thickness=1)
+                    out = cv2.line(out, (int(bb_proj[0][0]), int(bb_proj[0][1])), (int(bb_proj[2][0]), int(bb_proj[2][1])), color=(0,255,100), thickness=1)
+                    out = cv2.line(out, (int(bb_proj[1][0]), int(bb_proj[1][1])), (int(bb_proj[7][0]), int(bb_proj[7][1])), color=(0,255,100), thickness=1)
+                    out = cv2.line(out, (int(bb_proj[2][0]), int(bb_proj[2][1])), (int(bb_proj[7][0]), int(bb_proj[7][1])), color=(0,255,100), thickness=1)
+
+                    out = cv2.line(out, (int(bb_proj[4][0]), int(bb_proj[4][1])), (int(bb_proj[5][0]), int(bb_proj[5][1])), color=(0,255,100), thickness=1)
+                    out = cv2.line(out, (int(bb_proj[4][0]), int(bb_proj[4][1])), (int(bb_proj[6][0]), int(bb_proj[6][1])), color=(0,255,100), thickness=1)
+                    out = cv2.line(out, (int(bb_proj[3][0]), int(bb_proj[3][1])), (int(bb_proj[5][0]), int(bb_proj[5][1])), color=(0,255,100), thickness=1)
+                    out = cv2.line(out, (int(bb_proj[3][0]), int(bb_proj[3][1])), (int(bb_proj[6][0]), int(bb_proj[6][1])), color=(0,255,100), thickness=1)
+
+                    out = cv2.line(out, (int(bb_proj[0][0]), int(bb_proj[0][1])), (int(bb_proj[3][0]), int(bb_proj[3][1])), color=(0,255,100), thickness=1)
+                    out = cv2.line(out, (int(bb_proj[1][0]), int(bb_proj[1][1])), (int(bb_proj[6][0]), int(bb_proj[6][1])), color=(0,255,100), thickness=1)
+                    out = cv2.line(out, (int(bb_proj[2][0]), int(bb_proj[2][1])), (int(bb_proj[5][0]), int(bb_proj[5][1])), color=(0,255,100), thickness=1)
+                    out = cv2.line(out, (int(bb_proj[7][0]), int(bb_proj[7][1])), (int(bb_proj[4][0]), int(bb_proj[4][1])), color=(0,255,100), thickness=1)
+
+                alt_view_cache[view][True] = np.copy(out)
+
+                return alt_view_cache[view][show_objects]
+
+            def render_side_view():
+                
+                #side view is a camera off to the right, looking left
+                side_cam = np.array([[0, 0, -1, 2], [0, 1, 0, 0], [1, 0, 0, 2], [0, 0, 0, 1]])
+
+                return render_alt_view(side_cam, "side")
+
+            def render_top_view():
+
+                #top view is a camera up above
+                top_cam = np.array([[1, 0, 0, 0], [0, 0, 1, -2], [0, -1, 0, 1.5], [0, 0, 0, 1]])
+
+                return render_alt_view(top_cam, "top")
+
+            def render_alt_views():  
+                cv2.imshow("side view", render_side_view())
+                cv2.imshow("top view", render_top_view())
 
             print("frame: {0}".format(frame_ids[frame_ids_idx]))
             
             cv2.namedWindow("rendered frame")
             cv2.imshow("rendered frame", render_current_view())
 
+            cv2.namedWindow("side view")
+            cv2.namedWindow("top view")
+
+            render_alt_views()
+
             def update_objects():
                 nonlocal current_pose
-                nonlocal object_meshes
+                nonlocal object_meshes_and_bbs
 
                 frame_pose = synchronized_poses_refined[frame_ids[frame_ids_idx]]
                 sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ frame_pose
                 new_current_pose = invert_affine(sensor_pose_in_annotated_coordinates)
 
-                for obj_id in object_meshes.keys():
-                    object_meshes[obj_id] = object_meshes[obj_id].transform(new_current_pose @ invert_affine(current_pose))
+                for obj_id in object_meshes_and_bbs.keys():
+                    mesh = object_meshes_and_bbs[obj_id][0].transform(new_current_pose @ invert_affine(current_pose))
+                    bb = apply_affine_to_points(apply_affine_to_points(object_meshes_and_bbs[obj_id][1], invert_affine(current_pose)), new_current_pose)
+                    object_meshes_and_bbs[obj_id] = (mesh, bb)
 
                 current_pose = new_current_pose
 
@@ -197,7 +322,10 @@ class ScenePoseRefiner():
     #------------------------------------------------------------------------------------------
             def increment_frame_id():
                 nonlocal frame_ids_idx
-                nonlocal object_meshes
+                nonlocal alt_view_cache
+
+                #clear alt_view_cache for new frame (rerender)
+                alt_view_cache = {}
 
                 frame_ids_idx += 1
                 frame_ids_idx = frame_ids_idx % len(frame_ids)
@@ -208,34 +336,6 @@ class ScenePoseRefiner():
                 print("frame: {0}".format(frame_ids[frame_ids_idx]))
             
                 update_objects()
-
-    #------------------------------------------------------------------------------------------
-            def render_side_view():
-                all_objs_and_colors_in_sensor_coordinates = []
-
-                for idx, (obj_id, obj_mesh) in enumerate(object_meshes.items()):
-                    obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
-                    all_objs_and_colors_in_sensor_coordinates.append(obj_in_sensor_coordinates, colors[idx % len(colors)])
-
-                bgr = load_bgr(frames_dir, frame_ids[frame_ids_idx], "jpg")
-                pcld_in_sensor_coordinates = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics, camera_distortion, prune_zero=True)
-
-                #side view is a camera off to the right, looking left
-                cam2_in_cam1 = np.array([[0, 0, -1, 1], [0, 1, 0, 0], [1, 0, 0, 1.5], [0, 0, 0, 1]])
-
-                pcld_in_cam2_coordinates = pcld_in_sensor_coordinates @ cam2_in_cam1[:3,:3] + cam2_in_cam1[:3,3]
-
-                out = np.zeros_like(bgr)
-
-                scene_pcld_projected, _ = cv2.projectPoints(pcld_in_cam2_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics, camera_distortion)
-                scene_pcld_projected = np.round(scene_pcld_projected.squeeze(1)).astype(int)
-
-                for pt_x, pt_y in scene_pcld_projected:
-                    out = cv2.circle(out, (int(pt_x), int(pt_y)), 1, color=colors[idx % len(colors)], thickness=-1)
-
-                cv2.imshow("side view", out)
-                cv2.waitKey(500)
-                cv2.destroyWindow("side view")
 
     #------------------------------------------------------------------------------------------
 
@@ -402,6 +502,8 @@ class ScenePoseRefiner():
                     increase_x()
                 elif k == ord('1'):
                     toggle_vis()
+                elif k == ord('2'):   
+                    render_alt_views()
 
         # change of coordinates for synchronized poses from:
         # (sensor -> opti) back to (virtual -> opti)

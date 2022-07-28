@@ -54,4 +54,10 @@ def unproject_pixels(points, depths, intrinsic, distortion):
     pts_xyz[:,2] = depths
 
     return pts_xyz
+
+def apply_affine_to_points(points, aff):
+    ones = np.ones((points.shape[0], 1))
+    points_homo = np.hstack((points, ones))
+    points_homo_aff = points_homo @ aff.T
+    return np.ascontiguousarray(points_homo_aff[:,:3])
     
