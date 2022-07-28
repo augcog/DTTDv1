@@ -62,7 +62,7 @@ class SemanticLabelingGenerator():
             object_pcld_transformed[obj_id] = obj_pcld
         
         #use first frame coordinate system as world coordinates
-        for frame_id, sensor_pose in tqdm(synchronized_poses_corrected.items(), total=len(synchronized_poses_corrected)):
+        for frame_id, sensor_pose in tqdm(synchronized_poses_corrected.items(), total=len(synchronized_poses_corrected), desc="gen semantic segmentation"):
 
             rgb = load_rgb(frames_dir, frame_id, "jpg")
             h, w, _ = rgb.shape

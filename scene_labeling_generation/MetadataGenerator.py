@@ -7,6 +7,7 @@ Given objects and their poses in first camera frame, generate semantic segmentat
 """
 
 import numpy as np
+from tqdm import tqdm
 import yaml
 
 import os, sys 
@@ -46,7 +47,7 @@ class MetadataGenerator():
         sensor_pose_annotated_frame_inv = invert_affine(sensor_pose_annotated_frame)
         
         #use first frame coordinate system as world coordinates
-        for frame_id, sensor_pose in synchronized_poses_corrected.items():
+        for frame_id, sensor_pose in tqdm(synchronized_poses_corrected.items(), total=len(synchronized_poses_corrected), desc="get metadata"):
 
             sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ sensor_pose
             sensor_pose_in_annotated_coordinates_inv = invert_affine(sensor_pose_in_annotated_coordinates)
