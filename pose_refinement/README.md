@@ -12,7 +12,8 @@ Controls:
  * r: Reset to original pre-refined pose
  * ENTER: Next frame
  * 1: Toggle object visibility
- * 2: Update side-view
+ * 2: Toggle bounding box visibility
+ * 3: Update alt views
  * u: Increase Camera Rotation Alpha
  * i: Decrease Camera Rotation Alpha
  * p: Increase Camera Rotation Beta
