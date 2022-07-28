@@ -502,6 +502,7 @@ class ScenePoseRefiner():
                     increase_x()
                 elif k == ord('1'):
                     toggle_vis()
+                    render_alt_views()
                 elif k == ord('2'):   
                     render_alt_views()
 
