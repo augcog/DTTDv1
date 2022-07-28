@@ -310,6 +310,7 @@ class ScenePoseRefiner():
             def update_objects():
                 nonlocal current_pose
                 nonlocal object_meshes_and_bbs
+                nonlocal alt_view_cache
 
                 frame_pose = synchronized_poses_refined[frame_ids[frame_ids_idx]]
                 sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ frame_pose
@@ -322,27 +323,28 @@ class ScenePoseRefiner():
 
                 current_pose = new_current_pose
 
+                # clear alt view cache
+                alt_view_cache = {}
+
                 cv2.imshow("rendered frame", render_current_view())
 
             def toggle_vis():
                 nonlocal show_objects
                 show_objects = not show_objects
-                update_objects()
+
+                cv2.imshow("rendered frame", render_current_view())
                 render_alt_views()
 
             def toggle_bb_vis():
                 nonlocal show_bb
                 show_bb = not show_bb
-                update_objects()
+                
+                cv2.imshow("rendered frame", render_current_view())
                 render_alt_views()
 
     #------------------------------------------------------------------------------------------
             def increment_frame_id():
                 nonlocal frame_ids_idx
-                nonlocal alt_view_cache
-
-                #clear alt_view_cache for new frame (rerender)
-                alt_view_cache = {}
 
                 frame_ids_idx += 1
                 frame_ids_idx = frame_ids_idx % len(frame_ids)
