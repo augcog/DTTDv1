@@ -33,7 +33,6 @@ def main():
 
     parser = argparse.ArgumentParser(description='Compute virtual optitrack camera to camera sensor extrinsic.')
     parser.add_argument('--scene_name', default='', type=str, help='Which scene to use to calculate extrinsic. Else, uses latest extrinsic scene in extrinsics dir')
-
     args = parser.parse_args()
 
     cam_opti_extr_calc = CameraOptiExtrinsicCalculator()
@@ -52,7 +51,7 @@ def main():
     synchronized_poses_csv = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized.csv")
     synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
     synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
-    
+
     extrinsic = cam_opti_extr_calc.calculate_extrinsic(scene_dir, synchronized_poses, write_to_file=True)
     
     print("computed extrinsic:", extrinsic)

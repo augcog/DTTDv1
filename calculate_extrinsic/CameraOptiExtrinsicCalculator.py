@@ -16,7 +16,6 @@ class CameraOptiExtrinsicCalculator():
     def __init__(self):
 
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.aruco_to_opti_offset = np.loadtxt(os.path.join(dir_path, "aruco_marker.txt"))
 
         # solve for aruco rotation using marker positions
         with open(os.path.join(dir_path, "aruco_corners.yaml")) as f:
@@ -34,13 +33,19 @@ class CameraOptiExtrinsicCalculator():
 
         opti_to_aruco = np.vstack((aruco_x, aruco_y, aruco_z))
 
+        aruco_center = np.mean(np.array([aruco_corners['quad1'], aruco_corners['quad2'], aruco_corners['quad3'], aruco_corners['quad4']]), axis=0)
+
+        self.aruco_center = aruco_center
+
         self.aruco_to_opti_rot = np.linalg.inv(opti_to_aruco)
 
     def get_aruco_to_opti_transform(self):
         aruco_to_opti_rot = self.aruco_to_opti_rot #aruco -> opti (rot (3x3))
         aruco_to_opti = np.eye(4)
         aruco_to_opti[:3,:3] = aruco_to_opti_rot
-        aruco_to_opti[:3,3] = self.aruco_to_opti_offset - np.array([0, 0.005, 0])
+
+        #take aruco center, offset by 3 millimeters in aruco downwards direction (-Z)
+        aruco_to_opti[:3,3] = self.aruco_center - aruco_to_opti_rot @ np.array([0., 0., 0.003])
 
         return aruco_to_opti
 

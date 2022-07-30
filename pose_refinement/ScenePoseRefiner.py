@@ -346,8 +346,10 @@ class ScenePoseRefiner():
             def increment_frame_id():
                 nonlocal frame_ids_idx
 
+                if frame_ids_idx == len(frame_ids) - 1:
+                    return False
+
                 frame_ids_idx += 1
-                frame_ids_idx = frame_ids_idx % len(frame_ids)
 
                 synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] = synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,:3] @ current_refinement[:3,:3]
                 synchronized_poses_refined[frame_ids[frame_ids_idx]][:3,3] += current_refinement[:3,3]
@@ -355,6 +357,8 @@ class ScenePoseRefiner():
                 print("frame: {0} / {1}".format(frame_ids[frame_ids_idx], len(frame_ids)))
             
                 update_objects()
+
+                return True
 
     #------------------------------------------------------------------------------------------
 
@@ -491,7 +495,9 @@ class ScenePoseRefiner():
                 if k == ord('b'):
                     break
                 elif k == 13: #enter
-                    increment_frame_id()
+                    #break loop when out of frames
+                    if not increment_frame_id():
+                        break
                 elif k == ord('r'):
                     synchronized_poses_refined[frame_ids[frame_ids_idx]] = np.copy(synchronized_poses_corrected[frame_ids[frame_ids_idx]])
                     current_refinement = np.eye(4)
