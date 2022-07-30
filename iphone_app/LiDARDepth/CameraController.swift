@@ -51,7 +51,8 @@ class CameraController: NSObject, ObservableObject {
     private var timestamps : String = ""
     private var start_timestamp : Double = 0
     private var data_start_frame_id : Int = -1
-    
+    private var end_collecting_data : Bool = false
+    private var timestamp_exported : Bool = false
     
     override init() {
         
@@ -80,9 +81,7 @@ class CameraController: NSObject, ObservableObject {
                 data_start_frame_id = frame_id
             }
             else{ // when end collecting data
-                let csv_url = folder_url!.appendingPathComponent("timestamps.csv")
-                timestamps += String(data_start_frame_id) // add id to the end of the array
-                try? timestamps.write(toFile: csv_url.path, atomically: false, encoding: String.Encoding.utf8)
+                end_collecting_data = true
             }
         }
     }
@@ -331,7 +330,11 @@ class CameraController: NSObject, ObservableObject {
         }
     }
     
-    
+    private func exportTimeStampData(){
+        let csv_url = folder_url!.appendingPathComponent("timestamps.csv")
+        timestamps += String(data_start_frame_id) // add id to the end of the array
+        try? timestamps.write(toFile: csv_url.path, atomically: false, encoding: String.Encoding.utf8)
+    }
     
     
 //    func lerp(x1: (CGFloat, CGFloat, CGFloat), x2: (CGFloat, CGFloat, CGFloat), ratio: CGFloat) -> (CGFloat, CGFloat, CGFloat){
@@ -483,6 +486,11 @@ extension CameraController: AVCaptureDataOutputSynchronizerDelegate {
         // save to local directory
         if(can_write_data){
             save_data(sampleBuffer: syncedVideoData.sampleBuffer, depthDataMap: syncedDepthData.depthData.depthDataMap, timestamp: syncedVideoData.timestamp, cameraCalibrationData: cameraCalibrationData)
+        }
+        
+        if(end_collecting_data && !timestamp_exported){
+            exportTimeStampData()
+            timestamp_exported = true
         }
         
         // delegate data
