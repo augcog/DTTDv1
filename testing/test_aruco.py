@@ -9,6 +9,11 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.frame_utils import calculate_aruco_from_bgr_and_depth, get_color_ext, load_bgr, load_depth, load_rgb, get_color_ext
 
+'''
+X - Red
+Y - Green
+Z - Blue
+'''
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Test ARUCO.')
