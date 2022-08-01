@@ -87,10 +87,9 @@ class CameraPoseSynchronizer():
         camera_calib_df = camera_df.copy()
         camera_calib_df = camera_calib_df[camera_calib_df['Frame'].apply(lambda x : x >= calibration_start_frame_id and x < calibration_end_frame_id)]
 
-        #calculate virtual -> opti from ARUCO and extrinsic
+        #calculate virtual -> opti from known ARUCO marker position
 
-        camera_opti_calc = CameraOptiExtrinsicCalculator()
-        aruco_to_opti = camera_opti_calc.get_aruco_to_opti_transform()
+        aruco_to_opti = CameraOptiExtrinsicCalculator().get_aruco_to_opti_transform()
 
         dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         parameters =  cv2.aruco.DetectorParameters_create()
@@ -121,7 +120,7 @@ class CameraPoseSynchronizer():
                 return x
                 
         aruco_computed_virtual_to_opti = np.array(camera_calib_df.apply(calculate_virtual_to_opti, axis=1, result_type="expand")).astype(np.float64)
-        
+
         camera_calib_df["position_x"] = aruco_computed_virtual_to_opti[:,0]
         camera_calib_df["position_y"] = aruco_computed_virtual_to_opti[:,1]
         camera_calib_df["position_z"] = aruco_computed_virtual_to_opti[:,2]

@@ -139,3 +139,28 @@ class AzureKinectDataCapturer():
         print("All data saved!")
         print("Run process_data to perform synchronization and extract capture phase.")
         print("Additionally, please fill scene_meta.yaml with the objects that are in this scene.")
+
+    @staticmethod
+    def capture_single_frame():
+        # start Azure Kinect camera
+        k4a = PyK4A()
+        k4a.start()
+
+        print("Press enter to capture.")
+
+        while True:
+            capture = k4a.get_capture()
+
+            color_image = capture.color[:,:,:3]
+            depth_image = capture.transformed_depth
+
+            color_image = np.ascontiguousarray(color_image)
+
+            cv2.imshow("Color Image", color_image)
+            cv2.imshow("Depth Image", depth_image)
+
+            # Enter
+            if cv2.waitKey(1) == 13:
+                break
+
+        return color_image, depth_image
