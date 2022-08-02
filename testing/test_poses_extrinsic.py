@@ -65,29 +65,36 @@ def main():
     for i in range(len(poses)):
         cv2.namedWindow("Poses_{0}".format(i))
         cv2.resizeWindow("Poses_{0}".format(i), 640, 360)
+    
+    while True:
+        for frame_id in frameids:
+            
+            opti_poses = [p[frame_id] for p in poses]
 
-    for frame_id in frameids:
-        
-        opti_poses = [p[frame_id] for p in poses]
+            frame = load_bgr(frames_dir, frame_id, "png")
+            frames = [np.copy(frame) for _ in range(len(poses))]
 
-        frame = load_bgr(frames_dir, frame_id, "png")
-        frames = [np.copy(frame) for _ in range(len(poses))]
+            sensor_to_optis = [opti_pose @ invert_affine(extrinsic) for opti_pose in opti_poses]
+            sensor_to_arucos = [opti_to_aruco @ sensor_to_opti for sensor_to_opti in sensor_to_optis]
+            aruco_to_sensors = [invert_affine(sensor_to_aruco) for sensor_to_aruco in sensor_to_arucos]
 
-        sensor_to_optis = [opti_pose @ invert_affine(extrinsic) for opti_pose in opti_poses]
-        sensor_to_arucos = [opti_to_aruco @ sensor_to_opti for sensor_to_opti in sensor_to_optis]
-        aruco_to_sensors = [invert_affine(sensor_to_aruco) for sensor_to_aruco in sensor_to_arucos]
+            rvecs_and_tvecs = [rotvec_trans_from_affine_matrix(aruco_to_sensor) for aruco_to_sensor in aruco_to_sensors]
 
-        rvecs_and_tvecs = [rotvec_trans_from_affine_matrix(aruco_to_sensor) for aruco_to_sensor in aruco_to_sensors]
+            for (rvec, tvec), frame in zip(rvecs_and_tvecs, frames):
+                cv2.aruco.drawAxis(frame, camera_intrinsic_matrix, camera_distortion_coefficients, rvec, tvec / 9, 0.01)  # Draw Axis
 
-        for (rvec, tvec), frame in zip(rvecs_and_tvecs, frames):
-            cv2.aruco.drawAxis(frame, camera_intrinsic_matrix, camera_distortion_coefficients, rvec, tvec / 9, 0.01)  # Draw Axis
+            frames = [cv2.resize(f, (640, 360)) for f in frames]
 
-        frames = [cv2.resize(f, (640, 360)) for f in frames]
+            for i, frame in enumerate(frames):
+                cv2.imshow("Poses_{0}".format(i), frame)
 
-        for i, frame in enumerate(frames):
-            cv2.imshow("Poses_{0}".format(i), frame)
+            cv2.waitKey(15)
 
-        cv2.waitKey(15)
+        print("View again? (y/n)")
+        if input().lower() == "y":
+            continue
+        else:
+            break
 
     for i in range(len(poses)):
         cv2.destroyWindow("Poses_{0}".format(i))
