@@ -11,16 +11,16 @@ Press (q) to quit.
 """
 
 import cv2
-from datetime import datetime
 import numpy as np
 from pygame import mixer
-from pyk4a import PyK4A, CalibrationType
+from pyk4a import PyK4A
 import yaml
 
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
+from utils.camera_utils import write_static_intrinsic
 from utils.frame_utils import write_bgr, write_depth
 
 CALIBRATION_KEY_START = 'c'
@@ -85,6 +85,8 @@ class AzureKinectDataCapturer():
         scene_meta['camera'] = self.camera_name
         with open(scene_meta_file, "w") as f:
             yaml.dump(scene_meta, f)
+
+        write_static_intrinsic(self.camera_name, self.scene_dir, raw=True)
 
         frames_dir = os.path.join(self.scene_dir, "data_raw")
         if not os.path.isdir(frames_dir):

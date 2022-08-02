@@ -13,7 +13,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from calculate_extrinsic import CameraOptiExtrinsicCalculator
-from utils.camera_utils import load_intrinsics, load_distortion
+from utils.camera_utils import load_frame_intrinsics, load_distortion
 from utils.depth_utils import filter_depths_valid_percentage
 from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth, transfer_color, transfer_depth, get_color_ext
 
@@ -54,7 +54,7 @@ class CameraPoseSynchronizer():
         position_y_key = 'camera_Position_Y'
         position_z_key = 'camera_Position_Z'
 
-        camera_intrinsics = load_intrinsics(camera_name)
+        camera_intrinsics_dict = load_frame_intrinsics(scene_dir, raw=True)
         camera_distortion = load_distortion(camera_name)
 
         raw_frames_dir = os.path.join(scene_dir, "data_raw")
@@ -95,11 +95,13 @@ class CameraPoseSynchronizer():
         parameters =  cv2.aruco.DetectorParameters_create()
 
         def calculate_virtual_to_opti(row):
-            
-            color_image = load_bgr(raw_frames_dir, int(row["Frame"]), raw_frames_ext)
-            depth = load_depth(raw_frames_dir, int(row["Frame"]))
 
-            aruco_pose = calculate_aruco_from_bgr_and_depth(color_image, depth, cam_scale, camera_intrinsics, camera_distortion, dictionary, parameters)
+            frame_id = int(row["Frame"])
+            
+            color_image = load_bgr(raw_frames_dir, frame_id, raw_frames_ext)
+            depth = load_depth(raw_frames_dir, frame_id)
+
+            aruco_pose = calculate_aruco_from_bgr_and_depth(color_image, depth, cam_scale, camera_intrinsics_dict[frame_id], camera_distortion, dictionary, parameters)
 
             if aruco_pose:  # If there are markers found by detector
 

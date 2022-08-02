@@ -11,7 +11,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 from calculate_extrinsic import CameraOptiExtrinsicCalculator
 from data_processing import CameraPoseSynchronizer
 from utils.affine_utils import invert_affine, rotvec_trans_from_affine_matrix
-from utils.camera_utils import load_intrinsics, load_distortion, load_extrinsics
+from utils.camera_utils import load_frame_intrinsics, load_distortion, load_extrinsics
 from utils.constants import EXTRINSICS_DIR
 from utils.datetime_utils import get_latest_str_from_str_time_list
 from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth
@@ -46,7 +46,7 @@ def main():
         scene_metadata = yaml.safe_load(file)
 
     camera_name = scene_metadata["camera"]
-    camera_intrinsic_matrix = load_intrinsics(camera_name)
+    camera_intrinsics_dict= load_frame_intrinsics(scene_dir, raw=False)
     camera_distortion_coefficients = load_distortion(camera_name)
     extrinsic = load_extrinsics(camera_name)
 
@@ -80,7 +80,7 @@ def main():
         rvecs_and_tvecs = [rotvec_trans_from_affine_matrix(aruco_to_sensor) for aruco_to_sensor in aruco_to_sensors]
 
         for (rvec, tvec), frame in zip(rvecs_and_tvecs, frames):
-            cv2.aruco.drawAxis(frame, camera_intrinsic_matrix, camera_distortion_coefficients, rvec, tvec / 9, 0.01)  # Draw Axis
+            cv2.aruco.drawAxis(frame, camera_intrinsics_dict[frame_id], camera_distortion_coefficients, rvec, tvec / 9, 0.01)  # Draw Axis
 
         frames = [cv2.resize(f, (640, 360)) for f in frames]
 
@@ -107,7 +107,7 @@ def main():
         frame = load_bgr(frames_dir, frame_id, "png")
         depth = load_depth(frames_dir, frame_id)
 
-        aruco_pose = calculate_aruco_from_bgr_and_depth(frame, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients, aruco_dict, parameters)
+        aruco_pose = calculate_aruco_from_bgr_and_depth(frame, depth, cam_scale, camera_intrinsics_dict[frame_id], camera_distortion_coefficients, aruco_dict, parameters)
 
         if aruco_pose:  # If there are markers found by detector
 
