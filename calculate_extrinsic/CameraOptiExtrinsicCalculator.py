@@ -186,7 +186,7 @@ class CameraOptiExtrinsicCalculator():
             #NOTE: Here, we use cv2.aruco.estimatePoseSingleMarkers instead of our own aruco pose function in order to get a less influenced visualization
             aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
             parameters = cv2.aruco.DetectorParameters_create()
-            corners, ids, rejected_img_points = cv2.aruco.detectMarkers(frame_2, aruco_dict, parameters=parameters, cameraMatrix=camera_intrinsic_matrix, distCoeff=camera_distortion_coefficients)
+            corners, ids, rejected_img_points = cv2.aruco.detectMarkers(frame_2, aruco_dict, parameters=parameters, cameraMatrix=camera_intrinsics_dict[frame_id], distCoeff=camera_distortion_coefficients)
 
             if np.all(ids is not None):  # If there are markers found by detector
 
