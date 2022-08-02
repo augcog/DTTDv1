@@ -131,6 +131,18 @@ class IPhoneDataProcessor():
             
             intr = np.array(arr).T
 
+            _ = f.readline() # "Camera Extrinsic"
+            arr = []
+            for _ in range(4):
+                line = f.readline().rstrip()
+                line = [float(x) for x in line.replace('[', '').replace(']', '').split(',') if len(x) > 0]
+                arr.append(line)
+            
+            # Extrinsic should be Identity
+            extr = np.array(arr).T
+            assert(np.array_equal(extr[:,:3], np.eye(3)))
+            assert(np.array_equal(extr[:,3], np.zeros(3)))
+
             _ = f.readline() # "Distortion center"
             dist_center = [float(x) for x in f.readline().rstrip().split(',') if len(x) > 0]
 
@@ -189,6 +201,8 @@ class IPhoneDataProcessor():
 
             lookup_table = IPhoneDataProcessor.read_byte_float_file(lookup_table_file)
             intr, distortion_center = IPhoneDataProcessor.read_calib_file(calib_file)
+
+            exit()
             
             color = cv2.imread(color_file, cv2.IMREAD_UNCHANGED)
             color_undistorted = IPhoneDataProcessor.undistort_color(color, lookup_table, distortion_center)
@@ -224,33 +238,3 @@ class IPhoneDataProcessor():
 
         print("Transfered data into Azure Kinect format.")
         print("PLEASE fill the objects field in the scene_metadata.yaml")
-
-        
-        
-
-
-# frame_idx = 0
-
-# data_folder = "iphone_data"
-
-# while True:
-
-#     print(frame_idx)
-
-#     lookup_table_file = os.path.join(data_folder, "{0}_distortion_table.bin".format(frame_idx))
-#     calib_file = os.path.join(data_folder, "{0}_calibration.txt".format(frame_idx))
-#     rgb_file = os.path.join(data_folder, "{0}.jpeg".format(frame_idx))
-#     depth_file = os.path.join(data_folder, "{0}.bin".format(frame_idx))
-
-#     if not os.path.isfile(lookup_table_file):
-#         break
-
-#     lookup_table = read_byte_float_file(lookup_table_file)
-#     intr, distortion_center = read_calib_file(calib_file)
-    
-#     color = cv2.imread(rgb_file, cv2.IMREAD_UNCHANGED)
-#     depth = cv2.imread(depth_file, cv2.IMREAD_UNCHANGED)
-
-#     out = undistort(color, lookup_table, intr, distortion_center)
-
-#     frame_idx += 1
