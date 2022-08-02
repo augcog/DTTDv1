@@ -12,8 +12,6 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from utils.affine_utils import invert_affine
-from utils.camera_utils import load_intrinsics
 from utils.constants import AZURE_KINECT_COLOR_HEIGHT, AZURE_KINECT_COLOR_WIDTH
 from utils.frame_utils import load_bgr, load_label, load_meta
 

@@ -11,16 +11,16 @@ Press (q) to quit.
 """
 
 import cv2
-from datetime import datetime
 import numpy as np
 from pygame import mixer
-from pyk4a import PyK4A, CalibrationType
+from pyk4a import PyK4A
 import yaml
 
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
+from utils.camera_utils import write_static_intrinsic
 from utils.frame_utils import write_bgr, write_depth
 
 CALIBRATION_KEY_START = 'c'
@@ -86,6 +86,8 @@ class AzureKinectDataCapturer():
         with open(scene_meta_file, "w") as f:
             yaml.dump(scene_meta, f)
 
+        write_static_intrinsic(self.camera_name, self.scene_dir, raw=True)
+
         frames_dir = os.path.join(self.scene_dir, "data_raw")
         if not os.path.isdir(frames_dir):
             os.mkdir(frames_dir)
@@ -139,3 +141,28 @@ class AzureKinectDataCapturer():
         print("All data saved!")
         print("Run process_data to perform synchronization and extract capture phase.")
         print("Additionally, please fill scene_meta.yaml with the objects that are in this scene.")
+
+    @staticmethod
+    def capture_single_frame():
+        # start Azure Kinect camera
+        k4a = PyK4A()
+        k4a.start()
+
+        print("Press enter to capture.")
+
+        while True:
+            capture = k4a.get_capture()
+
+            color_image = capture.color[:,:,:3]
+            depth_image = capture.transformed_depth
+
+            color_image = np.ascontiguousarray(color_image)
+
+            cv2.imshow("Color Image", color_image)
+            cv2.imshow("Depth Image", depth_image)
+
+            # Enter
+            if cv2.waitKey(1) == 13:
+                break
+
+        return color_image, depth_image
