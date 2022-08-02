@@ -201,8 +201,6 @@ class IPhoneDataProcessor():
 
             lookup_table = IPhoneDataProcessor.read_byte_float_file(lookup_table_file)
             intr, distortion_center = IPhoneDataProcessor.read_calib_file(calib_file)
-
-            exit()
             
             color = cv2.imread(color_file, cv2.IMREAD_UNCHANGED)
             color_undistorted = IPhoneDataProcessor.undistort_color(color, lookup_table, distortion_center)
