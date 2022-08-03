@@ -3,6 +3,7 @@ Cleans the exported tracking data output of the OptiTrack
 """
 
 import cv2
+from multiprocessing import Process
 import numpy as np
 from scipy import interpolate
 import struct
@@ -13,7 +14,8 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from utils.constants import IPHONE_DEPTH_WIDTH, IPHONE_DEPTH_HEIGHT
+from utils.camera_utils import write_frame_intrinsics
+from utils.constants import IPHONE_COLOR_WIDTH, IPHONE_COLOR_HEIGHT, IPHONE_DEPTH_WIDTH, IPHONE_DEPTH_HEIGHT
 from utils.frame_utils import write_bgr, write_depth
 
 class IPhoneDataProcessor():
@@ -46,7 +48,49 @@ class IPhoneDataProcessor():
         ys = new_v_point_y + distortion_optical_center[1]
 
         return xs, ys
-    
+
+    """
+    pts_x = (N,)
+    pts_y = (N,)
+    """
+    @staticmethod
+    def bilinear_interp(img, pts_x, pts_y):
+        pts_x_floored = np.floor(pts_x).astype(int)
+        pts_x_ceil = np.ceil(pts_x).astype(int)
+
+        pts_y_floored = np.floor(pts_y).astype(int)
+        pts_y_ceil = np.ceil(pts_y).astype(int)
+
+        pts_x_ratio = np.expand_dims(pts_x  - pts_x_floored, -1)
+        pts_y_ratio = np.expand_dims(pts_y - pts_y_floored, -1)
+
+        top_left_flattened = np.clip(pts_y_floored * img.shape[1] + pts_x_floored, 0, img.shape[0] * img.shape[1] - 1)
+        top_right_flattened = np.clip(pts_y_floored * img.shape[1] + pts_x_ceil, 0, img.shape[0] * img.shape[1] - 1)
+        bottom_left_flattened = np.clip(pts_y_ceil * img.shape[1] + pts_x_floored, 0, img.shape[0] * img.shape[1] - 1)
+        bottom_right_flattened = np.clip(pts_y_ceil * img.shape[1] + pts_x_ceil, 0, img.shape[0] * img.shape[1] - 1)
+
+        img_flattened = img.reshape((-1, 3))
+
+        top_left_color = img_flattened[top_left_flattened].astype(np.float32)
+        top_right_color = img_flattened[top_right_flattened].astype(np.float32)
+        bottom_left_color = img_flattened[bottom_left_flattened].astype(np.float32)
+        bottom_right_color = img_flattened[bottom_right_flattened].astype(np.float32)
+
+        top_colors = top_left_color * (1 - pts_x_ratio) + top_right_color * pts_x_ratio
+        bottom_colors = bottom_left_color * (1 - pts_x_ratio) + bottom_right_color * pts_x_ratio
+
+        colors = top_colors * (1 - pts_y_ratio) + bottom_colors * pts_y_ratio
+
+        colors[pts_x < 0] = np.zeros(3)
+        colors[pts_x > img.shape[1] - 1] = np.zeros(3)
+        colors[pts_y < 0] = np.zeros(3)
+        colors[pts_y > img.shape[0] - 1] = np.zeros(3)
+        colors = np.clip(colors, 0, 255).astype(np.uint8)
+
+        return colors
+
+
+
     """
     Uses bilinear interpolation and inverse lookup to undistort RGB image
     """
@@ -57,9 +101,9 @@ class IPhoneDataProcessor():
         x = np.arange(0, img.shape[1])
         y = np.arange(0, img.shape[0])
 
-        f_1 = interpolate.RectBivariateSpline(y, x, img[:,:,0])
-        f_2 = interpolate.RectBivariateSpline(y, x, img[:,:,1])
-        f_3 = interpolate.RectBivariateSpline(y, x, img[:,:,2])
+        # f_1 = interpolate.RectBivariateSpline(y, x, img[:,:,0])
+        # f_2 = interpolate.RectBivariateSpline(y, x, img[:,:,1])
+        # f_3 = interpolate.RectBivariateSpline(y, x, img[:,:,2])
 
         out = np.array([[[i, k] for i in range(img.shape[1])] for k in range(img.shape[0])])
 
@@ -68,15 +112,8 @@ class IPhoneDataProcessor():
         distorted_pts_x = distorted_pts_x.flatten()
         distorted_pts_y = distorted_pts_y.flatten()
 
-        c_1 = f_1(distorted_pts_y, distorted_pts_x, grid=False)
-        c_2 = f_2(distorted_pts_y, distorted_pts_x, grid=False)
-        c_3 = f_3(distorted_pts_y, distorted_pts_x, grid=False)
-
-        c_1 = np.expand_dims(c_1.reshape((h, w)), -1)
-        c_2 = np.expand_dims(c_2.reshape((h, w)), -1)
-        c_3 = np.expand_dims(c_3.reshape((h, w)), -1)
-
-        out = np.concatenate((c_1, c_2, c_3), -1)
+        out = IPhoneDataProcessor.bilinear_interp(img, distorted_pts_x, distorted_pts_y)
+        out = out.reshape((h, w, 3))
 
         return out
 
@@ -148,9 +185,46 @@ class IPhoneDataProcessor():
 
             return intr, dist_center
         
+    @staticmethod
+    def process_iphone_frameids(iphone_data_input, data_raw_output, frame_ids):
+        for frame_id in tqdm(frame_ids, total=len(frame_ids), desc="undistorting frames"):
+            lookup_table_file = os.path.join(iphone_data_input, "{0}_distortion_table.bin".format(frame_id))
+            calib_file = os.path.join(iphone_data_input, "{0}_calibration.txt".format(frame_id))
+            color_file = os.path.join(iphone_data_input, "{0}.jpeg".format(frame_id))
+
+            lookup_table = IPhoneDataProcessor.read_byte_float_file(lookup_table_file)
+            intr, distortion_center = IPhoneDataProcessor.read_calib_file(calib_file)
+            
+            color = cv2.imread(color_file, cv2.IMREAD_UNCHANGED)
+            color_undistorted = IPhoneDataProcessor.undistort_color(color, lookup_table, distortion_center)
+
+            #color image is sideways
+            write_bgr(data_raw_output, frame_id, color_undistorted, "jpg")
+
+            depth_old = os.path.join(iphone_data_input, "{0}.bin".format(frame_id))
+            depth_arr = []
+
+            with open(depth_old, 'rb') as f:
+                byte = f.read(2)
+
+                while byte != b"":
+                    x = int.from_bytes(byte, "little", signed=False)
+                    depth_arr.append(x)
+                    byte = f.read(2)
+
+            depth = np.array(depth_arr).astype(np.uint16)
+
+            # Depth data is sideways
+            depth = depth.reshape((IPHONE_DEPTH_HEIGHT, IPHONE_DEPTH_WIDTH))
+            depth_undistorted = IPhoneDataProcessor.undistort_depth(depth, lookup_table, distortion_center)
+
+            # Interpolate nearest for depth -> color size
+            depth_undistorted = cv2.resize(depth_undistorted, (IPHONE_COLOR_HEIGHT, IPHONE_COLOR_WIDTH), cv2.INTER_NEAREST)
+
+            write_depth(data_raw_output, frame_id, depth_undistorted)
 
     @staticmethod
-    def process_iphone_scene_data(scene_dir):
+    def process_iphone_scene_data(scene_dir, camera_name):
 
         iphone_data_input = os.path.join(scene_dir, "iphone_data")
         assert(os.path.isdir(iphone_data_input))
@@ -193,42 +267,30 @@ class IPhoneDataProcessor():
 
         camera_data_output.close()
         camera_time_break_output.close()
+        
+        num_threads = 10
+        threads = []
 
-        for frame_id in tqdm(frame_ids, total=len(frame_ids), desc="undistorting frames"):
-            lookup_table_file = os.path.join(iphone_data_input, "{0}_distortion_table.bin".format(frame_id))
+        for tid in range(num_threads):
+            thread = Process(target=IPhoneDataProcessor.process_iphone_frameids, args=(iphone_data_input, data_raw_output, frame_ids[tid::num_threads]))
+            threads.append(thread)
+        for tid in range(num_threads):
+            threads[tid].start()
+        for tid in range(num_threads):
+            threads[tid].join()
+
+        intrs = {}
+
+        for frame_id in tqdm(frame_ids, total=len(frame_ids), desc="collecting intrinsics"):
             calib_file = os.path.join(iphone_data_input, "{0}_calibration.txt".format(frame_id))
-            color_file = os.path.join(iphone_data_input, "{0}.jpeg".format(frame_id))
+            intr, _ = IPhoneDataProcessor.read_calib_file(calib_file)
+            intrs[frame_id] = intr
 
-            lookup_table = IPhoneDataProcessor.read_byte_float_file(lookup_table_file)
-            intr, distortion_center = IPhoneDataProcessor.read_calib_file(calib_file)
-            
-            color = cv2.imread(color_file, cv2.IMREAD_UNCHANGED)
-            color_undistorted = IPhoneDataProcessor.undistort_color(color, lookup_table, distortion_center)
+        write_frame_intrinsics(camera_name, scene_dir, intrs, raw=True)
 
-            #color image is sideways
-            write_bgr(data_raw_output, frame_id, color_undistorted, "jpg")
-
-            depth_old = os.path.join(iphone_data_input, "{0}.bin".format(frame_id))
-            depth_arr = []
-
-            with open(depth_old, 'rb') as f:
-                byte = f.read(2)
-
-                while byte != b"":
-                    x = int.from_bytes(byte, "little", signed=False)
-                    depth_arr.append(x)
-                    byte = f.read(2)
-
-            depth = np.array(depth_arr).astype(np.uint16)
-
-            #depth data is sideways
-            depth = depth.reshape((IPHONE_DEPTH_WIDTH, IPHONE_DEPTH_HEIGHT))
-            depth_undistorted = IPhoneDataProcessor.undistort_depth(depth, lookup_table, distortion_center)
-            write_depth(data_raw_output, frame_id, depth_undistorted)
-            
         scene_metadata = {}
         scene_metadata["cam_scale"] = 0.001
-        scene_metadata["camera"] = "iphone_camera1"
+        scene_metadata["camera"] = camera_name
         scene_metadata["objects"] = []
 
         with open(scene_metadata_output, "w") as f:
