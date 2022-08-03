@@ -13,7 +13,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from calculate_extrinsic import CameraOptiExtrinsicCalculator
-from utils.camera_utils import load_frame_intrinsics, load_distortion
+from utils.camera_utils import load_frame_intrinsics, load_distortion, write_frame_intrinsics
 from utils.depth_utils import filter_depths_valid_percentage
 from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth, transfer_color, transfer_depth, get_color_ext
 
@@ -252,6 +252,8 @@ class CameraPoseSynchronizer():
         
         synced_df_renumbered = synced_df.copy()
 
+        new_camera_intrinsics_dict = {}
+
         new_frame_id = 0
 
         if rewrite_images:
@@ -264,7 +266,12 @@ class CameraPoseSynchronizer():
                 transfer_color(raw_frames_dir, old_frame_id, raw_frames_ext, output_frames_dir, new_frame_id, new_frame_ext)
                 transfer_depth(raw_frames_dir, old_frame_id, output_frames_dir, new_frame_id)
 
+                new_camera_intrinsics_dict[new_frame_id] = camera_intrinsics_dict[old_frame_id]
+
                 new_frame_id += 1
+
+        if write_to_file:
+            write_frame_intrinsics(camera_name, scene_dir, new_camera_intrinsics_dict, raw=False)
 
         new_frame_ids = np.arange(synced_df_renumbered.shape[0])
 

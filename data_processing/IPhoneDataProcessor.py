@@ -54,7 +54,7 @@ class IPhoneDataProcessor():
     pts_y = (N,)
     """
     @staticmethod
-    def bilinear_interp(img, pts_x, pts_y):
+    def bilinear_interp_color(img, pts_x, pts_y):
         pts_x_floored = np.floor(pts_x).astype(int)
         pts_x_ceil = np.ceil(pts_x).astype(int)
 
@@ -112,7 +112,7 @@ class IPhoneDataProcessor():
         distorted_pts_x = distorted_pts_x.flatten()
         distorted_pts_y = distorted_pts_y.flatten()
 
-        out = IPhoneDataProcessor.bilinear_interp(img, distorted_pts_x, distorted_pts_y)
+        out = IPhoneDataProcessor.bilinear_interp_color(img, distorted_pts_x, distorted_pts_y)
         out = out.reshape((h, w, 3))
 
         return out
@@ -136,7 +136,11 @@ class IPhoneDataProcessor():
 
         distorted_pts_idx = distorted_pts_y * w + distorted_pts_x
 
-        depth_undistorted_flattened = depth_flattened[distorted_pts_idx]
+        distorted_pts_idx_clipped = np.clip(distorted_pts_idx, 0, h * w - 1)
+
+        depth_undistorted_flattened = depth_flattened[distorted_pts_idx_clipped]
+        depth_undistorted_flattened[distorted_pts_idx < 0] = 0
+        depth_undistorted_flattened[distorted_pts_idx > h * w - 1] = 0
 
         depth_undistorted = depth_undistorted_flattened.reshape((h, w)).astype(np.uint16)
 
@@ -198,7 +202,7 @@ class IPhoneDataProcessor():
             color = cv2.imread(color_file, cv2.IMREAD_UNCHANGED)
             color_undistorted = IPhoneDataProcessor.undistort_color(color, lookup_table, distortion_center)
 
-            #color image is sideways
+            # Color image is sideways
             write_bgr(data_raw_output, frame_id, color_undistorted, "jpg")
 
             depth_old = os.path.join(iphone_data_input, "{0}.bin".format(frame_id))
@@ -216,10 +220,11 @@ class IPhoneDataProcessor():
 
             # Depth data is sideways
             depth = depth.reshape((IPHONE_DEPTH_HEIGHT, IPHONE_DEPTH_WIDTH))
-            depth_undistorted = IPhoneDataProcessor.undistort_depth(depth, lookup_table, distortion_center)
 
             # Interpolate nearest for depth -> color size
-            depth_undistorted = cv2.resize(depth_undistorted, (IPHONE_COLOR_HEIGHT, IPHONE_COLOR_WIDTH), cv2.INTER_NEAREST)
+            depth = cv2.resize(depth, (IPHONE_COLOR_WIDTH, IPHONE_COLOR_HEIGHT), cv2.INTER_NEAREST)
+
+            depth_undistorted = IPhoneDataProcessor.undistort_depth(depth, lookup_table, distortion_center)
 
             write_depth(data_raw_output, frame_id, depth_undistorted)
 
