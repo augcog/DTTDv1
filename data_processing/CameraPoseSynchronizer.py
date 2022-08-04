@@ -256,19 +256,17 @@ class CameraPoseSynchronizer():
 
         new_frame_id = 0
 
-        if rewrite_images:
+        for _, row in tqdm(synced_df_renumbered.iterrows(), total=synced_df_renumbered.shape[0], desc="Writing Renumbered Frames"):
+            old_frame_id = int(row["Frame"])
 
-            new_frame_ext = "jpg" if to_jpg else "png"
-
-            for _, row in tqdm(synced_df_renumbered.iterrows(), total=synced_df_renumbered.shape[0], desc="Writing Renumbered Frames"):
-                old_frame_id = int(row["Frame"])
-
+            if rewrite_images:
+                new_frame_ext = "jpg" if to_jpg else "png"
                 transfer_color(raw_frames_dir, old_frame_id, raw_frames_ext, output_frames_dir, new_frame_id, new_frame_ext)
                 transfer_depth(raw_frames_dir, old_frame_id, output_frames_dir, new_frame_id)
 
-                new_camera_intrinsics_dict[new_frame_id] = camera_intrinsics_dict[old_frame_id]
+            new_camera_intrinsics_dict[new_frame_id] = camera_intrinsics_dict[old_frame_id]
 
-                new_frame_id += 1
+            new_frame_id += 1
 
         if write_to_file:
             write_scene_intrinsics(camera_name, scene_dir, new_camera_intrinsics_dict, raw=False)

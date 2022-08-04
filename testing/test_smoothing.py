@@ -37,8 +37,8 @@ def main():
     cam_pose_smoother = OptiKFSmoother()
     smoothed_poses = cam_pose_smoother.smooth_opti_poses_kf(scene_dir, cleaned_poses, write_smoothed_to_file=False)
 
-    cam_pose_smoother_arima = OptiARIMASmoother()
-    smoothed_poses_arima = cam_pose_smoother_arima.smooth_opti_poses_arima(scene_dir, cleaned_poses, write_smoothed_to_file=False)
+    # cam_pose_smoother_arima = OptiARIMASmoother()
+    # smoothed_poses_arima = cam_pose_smoother_arima.smooth_opti_poses_arima(scene_dir, cleaned_poses, write_smoothed_to_file=False)
 
     cam_pose_smoother_savgol = OptiSavgolSmoother()
     smoothed_poses_savgol = cam_pose_smoother_savgol.smooth_opti_poses_savgol(scene_dir, cleaned_poses, write_smoothed_to_file=False)
@@ -48,7 +48,7 @@ def main():
 
     notsmoothed_synchronized_df = cam_pose_synchronizer.get_synchronized_camera_poses_and_frames_with_known_offset(scene_dir, cleaned_poses, total_offset, frame_ids)
 
-    smoothed_arima_synchronized_df = cam_pose_synchronizer.get_synchronized_camera_poses_and_frames_with_known_offset(scene_dir, smoothed_poses_arima, total_offset, frame_ids)
+    # smoothed_arima_synchronized_df = cam_pose_synchronizer.get_synchronized_camera_poses_and_frames_with_known_offset(scene_dir, smoothed_poses_arima, total_offset, frame_ids)
 
     smoothed_savgol_synchronized_df = cam_pose_synchronizer.get_synchronized_camera_poses_and_frames_with_known_offset(scene_dir, smoothed_poses_savgol, total_offset, frame_ids)
 
@@ -58,7 +58,7 @@ def main():
 
     smoothed_synchronized_df.to_csv(os.path.join(output_dir, "camera_poses_smoothed.csv"))
     notsmoothed_synchronized_df.to_csv(os.path.join(output_dir, "camera_poses_orig.csv"))
-    smoothed_arima_synchronized_df.to_csv(os.path.join(output_dir, "camera_poses_smoothed_arima.csv"))
+    # smoothed_arima_synchronized_df.to_csv(os.path.join(output_dir, "camera_poses_smoothed_arima.csv"))
     smoothed_savgol_synchronized_df.to_csv(os.path.join(output_dir, "camera_poses_smoothed_savgol.csv"))
 
 if __name__ == "__main__":

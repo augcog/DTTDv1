@@ -2,12 +2,15 @@ import argparse
 import cv2
 import numpy as np
 from pyk4a import PyK4A, CalibrationType
+import yaml
 
 import os, sys 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from utils.frame_utils import calculate_aruco_from_bgr_and_depth, get_color_ext, load_bgr, load_depth, load_rgb, get_color_ext
+from utils.camera_utils import load_frame_intrinsics, load_distortion
+from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth, load_rgb, get_color_ext
+from utils.pointcloud_utils import pointcloud_from_rgb_depth
 
 '''
 X - Red
@@ -17,13 +20,9 @@ Z - Blue
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Test ARUCO.')
-    parser.add_argument('--frame_dir', default='', type=str, help='A directory of frames to use (else uses plugged in camera)')
+    parser.add_argument('--scene_dir', default='', type=str)
 
     args = parser.parse_args()
-
-    # Modify camera configuration
-    k4a = PyK4A()
-    k4a.start()
 
     img_id = 0
 
@@ -34,18 +33,34 @@ if __name__ == "__main__":
 
     parameters =  cv2.aruco.DetectorParameters_create()
 
-    camera_matrix = k4a.calibration.get_camera_matrix(CalibrationType.COLOR)
-    camera_dist = k4a.calibration.get_distortion_coefficients(CalibrationType.COLOR)
-
     output_dir = os.path.join(dir_path, "aruco_vis")
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
 
-    if args.frame_dir:
-        frame_ext = get_color_ext(args.frame_dir)
+    if args.scene_dir:
+        frame_dir = os.path.join(args.scene_dir, "data")
+        frame_ext = "png"
+
+        scene_metadata_file = os.path.join(args.scene_dir, "scene_meta.yaml")
+        with open(scene_metadata_file, 'r') as file:
+            scene_metadata = yaml.safe_load(file)
+
+        camera_name = scene_metadata["camera"]
+        cam_scale = scene_metadata["cam_scale"]
+        camera_intrinsics_dict = load_frame_intrinsics(args.scene_dir, raw=False)
+        camera_dist = load_distortion(camera_name)
+
+    else:
+        # Modify camera configuration
+        k4a = PyK4A()
+        k4a.start()
+
+        cam_scale = 0.001
+        camera_matrix = k4a.calibration.get_camera_matrix(CalibrationType.COLOR)
+        camera_dist = k4a.calibration.get_distortion_coefficients(CalibrationType.COLOR)
 
     while True:
-        if not args.frame_dir:
+        if not args.scene_dir:
             # Get capture
             capture = k4a.get_capture()
 
@@ -57,9 +72,12 @@ if __name__ == "__main__":
             rgb = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
         else:
             try:
-                color_image = load_bgr(args.frame_dir, img_id, frame_ext)
-                rgb = load_rgb(args.frame_dir, img_id, frame_ext)
-                depth_image = load_depth(args.frame_dir, img_id)
+                frame_dir = os.path.join(args.scene_dir, "data")
+                color_image = load_bgr(frame_dir, img_id, frame_ext)
+                rgb = load_rgb(frame_dir, img_id, frame_ext)
+                depth_image = load_depth(frame_dir, img_id)
+
+                camera_matrix = camera_intrinsics_dict[img_id]
             except:
                 print("out of frames at id {0}".format(img_id))
                 break
@@ -70,11 +88,11 @@ if __name__ == "__main__":
 
             rvec, tvec, corners = aruco_pose
 
-            # camera_pcld = pointcloud_from_rgb_depth(rgb, depth_image, 0.001, camera_matrix, camera_dist)
-            # aruco_pcld = o3d.geometry.PointCloud()
-            # aruco_pcld.points = o3d.utility.Vector3dVector(tvec)
-            # o3d.io.write_point_cloud(os.path.join(output_dir, "{0}_camera.ply".format(img_id)), camera_pcld)
-            # o3d.io.write_point_cloud(os.path.join(output_dir, "{0}_aruco_origin.ply".format(img_id)), aruco_pcld)
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth_image, 0.001, camera_matrix, camera_dist)
+            aruco_pcld = o3d.geometry.PointCloud()
+            aruco_pcld.points = o3d.utility.Vector3dVector(tvec)
+            o3d.io.write_point_cloud(os.path.join(output_dir, "{0}_camera.ply".format(img_id)), camera_pcld)
+            o3d.io.write_point_cloud(os.path.join(output_dir, "{0}_aruco_origin.ply".format(img_id)), aruco_pcld)
 
             (rvec - tvec).any()  # get rid of that nasty numpy value array error
             cv2.aruco.drawDetectedMarkers(color_image, corners)  # Draw A square around the markers

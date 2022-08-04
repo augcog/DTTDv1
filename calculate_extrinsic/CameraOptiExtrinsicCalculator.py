@@ -79,6 +79,7 @@ class CameraOptiExtrinsicCalculator():
         parameters = cv2.aruco.DetectorParameters_create()
 
         for frame_id, opti_pose in tqdm(synchronized_poses.items(), total=len(synchronized_poses), desc="Finding ARUCO"):
+
             frame = load_bgr(frames_dir, frame_id, "png")
             depth = load_depth(frames_dir, frame_id)
 
