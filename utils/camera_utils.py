@@ -75,7 +75,7 @@ def write_frame_intrinsics(camera_name, scene_dir, frame_intrinsics, raw):
     with open(intrinsic_file, 'w') as outfile:
         yaml.dump(intrinsic_out, outfile)
 
-def write_scene_intrinsics(camera_name, scene_dir, raw, frame_intrinsics=None):
+def write_scene_intrinsics(camera_name, scene_dir, frame_intrinsics, raw):
     if "az" in camera_name:
         write_static_intrinsic(camera_name, scene_dir, raw)
     elif "iphone" in camera_name:
