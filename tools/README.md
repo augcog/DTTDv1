@@ -200,7 +200,24 @@ Performs undistortion on iPhone color and depth frames. Resulting frames are ali
  Transforms data captured by Swift iOS app inside of `iphone_data_collection` into format outputted by Azure Kinect and `data_capturing/DataCapturer.py`.
 
 ### Other Requirements
- Place iPhone app output into a folder inside scene named `iphone_data`.
+Place iPhone app output into a folder inside scene named `iphone_data`.
+
+Organize the data like:
+
+```
+<scene name>
+│   timestamps.csv (Outputted from Iphone App)
+│
+└───camera_poses
+│   │   camera_poses.csv (OptiTrack poses)
+│   
+└───iphone_data
+    │   0.bin
+    |   0.jpeg
+    |   0_calibration.txt
+    |   0_distortion_table.bin
+    |   ...
+```
 
 ### Class Dependencies
 
