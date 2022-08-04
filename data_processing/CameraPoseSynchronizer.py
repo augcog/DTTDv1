@@ -13,7 +13,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from calculate_extrinsic import CameraOptiExtrinsicCalculator
-from utils.camera_utils import load_frame_intrinsics, load_distortion, write_frame_intrinsics
+from utils.camera_utils import load_frame_intrinsics, load_distortion, write_scene_intrinsics
 from utils.depth_utils import filter_depths_valid_percentage
 from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth, transfer_color, transfer_depth, get_color_ext
 
@@ -271,7 +271,7 @@ class CameraPoseSynchronizer():
                 new_frame_id += 1
 
         if write_to_file:
-            write_frame_intrinsics(camera_name, scene_dir, new_camera_intrinsics_dict, raw=False)
+            write_scene_intrinsics(camera_name, scene_dir, new_camera_intrinsics_dict, raw=False)
 
         new_frame_ids = np.arange(synced_df_renumbered.shape[0])
 

@@ -75,6 +75,14 @@ def write_frame_intrinsics(camera_name, scene_dir, frame_intrinsics, raw):
     with open(intrinsic_file, 'w') as outfile:
         yaml.dump(intrinsic_out, outfile)
 
+def write_scene_intrinsics(camera_name, scene_dir, raw, frame_intrinsics=None):
+    if "az" in camera_name:
+        write_static_intrinsic(camera_name, scene_dir, raw)
+    elif "iphone" in camera_name:
+        write_frame_intrinsics(camera_name, scene_dir, frame_intrinsics, raw)
+    else:
+        raise "Unknown camera type {0}".format(camera_name)
+
 def load_frame_intrinsics(scene_dir, raw):
     if raw:
         intrinsic_file = os.path.join(scene_dir, "intrinsic_raw.yaml")
