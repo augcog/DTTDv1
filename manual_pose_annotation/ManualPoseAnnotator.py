@@ -164,6 +164,9 @@ class ManualPoseAnnotator:
         camera_intrinsics_dict = load_frame_intrinsics(scene_dir, raw=False)
         camera_distortion_coefficients = load_distortion(camera_name)
         camera_extrinsic = load_extrinsics(camera_name, scene_dir, use_archive=use_archive_extrinsic)
+        
+        print("archiving extrinsic!")
+        write_archive_extrinsic(camera_extrinsic, scene_dir)
 
         rgb = load_rgb(frames_dir, frameid, "jpg")
         depth = load_depth(frames_dir, frameid)
@@ -854,8 +857,5 @@ class ManualPoseAnnotator:
             print("WARNING!! This might lead to error, try not to overlap so much!")
 
         annotated_poses = annotated_poses_collision
-
-        print("archiving extrinsic!")
-        write_archive_extrinsic(camera_extrinsic, scene_dir)
 
         return annotated_poses

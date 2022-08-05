@@ -62,6 +62,8 @@ Final dataset output:
  * Stay in the yellow area for best OptiTrack tracking.
  * Move other cameras out of area when collecting data to avoid OptiTrack confusion.
  * Run `manual_annotate_poses.py` on all scenes after collection in order to archive extrinsic.
+ * We want to keep the data anonymized. Avoid school logos and members of the lab appearing in frame.
+ * Perform 90-180 revolution around objects, one way. Try to minimize stand-still time.
 
 
 # Todo: Model Evaluation for this dataset
