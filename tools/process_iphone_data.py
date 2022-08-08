@@ -18,6 +18,7 @@ from utils.datetime_utils import get_latest_str_from_str_time_list
 
 def main():
     parser = argparse.ArgumentParser(description='Synchronize optitrack poses with frames')
+    parser.add_argument('camera_name', type=str)
     parser.add_argument('--scene_name', type=str, help='name of scene')
     parser.add_argument('--extrinsic', default=False, action="store_true", help='processing a extrinsic scene')
     args = parser.parse_args()
@@ -39,7 +40,7 @@ def main():
         scene_dir = os.path.join(SCENES_DIR, args.scene_name)
 
     iphone_data_processing = IPhoneDataProcessor()
-    iphone_data_processing.process_iphone_scene_data(scene_dir)
+    iphone_data_processing.process_iphone_scene_data(scene_dir, args.camera_name)
     
 
 if __name__ == "__main__":

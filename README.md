@@ -55,6 +55,16 @@ Final dataset output:
  * Extrinsic scenes have their color images inside of `data` stored as `png`. This is to maximize performance. Data scenes have their color images inside of `data` stored as `jpg`. This is necessary so the dataset remains usable.
  * iPhone spits out `jpg` raw color images, while Azure Kinect skips out `png` raw color images.
 
+# Best Scene Collection Practices
+ * Good synchronization phase by observing ARUCO marker, for Azure Kinect keep in mind interference from OptiTrack system.
+ * Don't have objects that are in our datasets in the background. Make sure they are out of view!
+ * Minimize number of extraneous ARUCO markers/APRIL tags that appear in the scene.
+ * Stay in the yellow area for best OptiTrack tracking.
+ * Move other cameras out of area when collecting data to avoid OptiTrack confusion.
+ * Run `manual_annotate_poses.py` on all scenes after collection in order to archive extrinsic.
+ * We want to keep the data anonymized. Avoid school logos and members of the lab appearing in frame.
+ * Perform 90-180 revolution around objects, one way. Try to minimize stand-still time.
+
 
 # Todo: Model Evaluation for this dataset
 Select SOTA pose estimation & image segmentation models and perform evaluations according to certain metrics.

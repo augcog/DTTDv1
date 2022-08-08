@@ -13,7 +13,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from calculate_extrinsic import CameraOptiExtrinsicCalculator
-from utils.camera_utils import load_intrinsics, load_distortion
+from utils.camera_utils import load_frame_intrinsics, load_distortion, write_scene_intrinsics
 from utils.depth_utils import filter_depths_valid_percentage
 from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth, transfer_color, transfer_depth, get_color_ext
 
@@ -54,7 +54,7 @@ class CameraPoseSynchronizer():
         position_y_key = 'camera_Position_Y'
         position_z_key = 'camera_Position_Z'
 
-        camera_intrinsics = load_intrinsics(camera_name)
+        camera_intrinsics_dict = load_frame_intrinsics(scene_dir, raw=True)
         camera_distortion = load_distortion(camera_name)
 
         raw_frames_dir = os.path.join(scene_dir, "data_raw")
@@ -87,20 +87,21 @@ class CameraPoseSynchronizer():
         camera_calib_df = camera_df.copy()
         camera_calib_df = camera_calib_df[camera_calib_df['Frame'].apply(lambda x : x >= calibration_start_frame_id and x < calibration_end_frame_id)]
 
-        #calculate virtual -> opti from ARUCO and extrinsic
+        #calculate virtual -> opti from known ARUCO marker position
 
-        camera_opti_calc = CameraOptiExtrinsicCalculator()
-        aruco_to_opti = camera_opti_calc.get_aruco_to_opti_transform()
+        aruco_to_opti = CameraOptiExtrinsicCalculator().get_aruco_to_opti_transform()
 
         dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         parameters =  cv2.aruco.DetectorParameters_create()
 
         def calculate_virtual_to_opti(row):
-            
-            color_image = load_bgr(raw_frames_dir, int(row["Frame"]), raw_frames_ext)
-            depth = load_depth(raw_frames_dir, int(row["Frame"]))
 
-            aruco_pose = calculate_aruco_from_bgr_and_depth(color_image, depth, cam_scale, camera_intrinsics, camera_distortion, dictionary, parameters)
+            frame_id = int(row["Frame"])
+            
+            color_image = load_bgr(raw_frames_dir, frame_id, raw_frames_ext)
+            depth = load_depth(raw_frames_dir, frame_id)
+
+            aruco_pose = calculate_aruco_from_bgr_and_depth(color_image, depth, cam_scale, camera_intrinsics_dict[frame_id], camera_distortion, dictionary, parameters)
 
             if aruco_pose:  # If there are markers found by detector
 
@@ -121,7 +122,7 @@ class CameraPoseSynchronizer():
                 return x
                 
         aruco_computed_virtual_to_opti = np.array(camera_calib_df.apply(calculate_virtual_to_opti, axis=1, result_type="expand")).astype(np.float64)
-        
+
         camera_calib_df["position_x"] = aruco_computed_virtual_to_opti[:,0]
         camera_calib_df["position_y"] = aruco_computed_virtual_to_opti[:,1]
         camera_calib_df["position_z"] = aruco_computed_virtual_to_opti[:,2]
@@ -251,19 +252,24 @@ class CameraPoseSynchronizer():
         
         synced_df_renumbered = synced_df.copy()
 
+        new_camera_intrinsics_dict = {}
+
         new_frame_id = 0
 
-        if rewrite_images:
+        for _, row in tqdm(synced_df_renumbered.iterrows(), total=synced_df_renumbered.shape[0], desc="Writing Renumbered Frames"):
+            old_frame_id = int(row["Frame"])
 
-            new_frame_ext = "jpg" if to_jpg else "png"
-
-            for _, row in tqdm(synced_df_renumbered.iterrows(), total=synced_df_renumbered.shape[0], desc="Writing Renumbered Frames"):
-                old_frame_id = int(row["Frame"])
-
+            if rewrite_images:
+                new_frame_ext = "jpg" if to_jpg else "png"
                 transfer_color(raw_frames_dir, old_frame_id, raw_frames_ext, output_frames_dir, new_frame_id, new_frame_ext)
                 transfer_depth(raw_frames_dir, old_frame_id, output_frames_dir, new_frame_id)
 
-                new_frame_id += 1
+            new_camera_intrinsics_dict[new_frame_id] = camera_intrinsics_dict[old_frame_id]
+
+            new_frame_id += 1
+
+        if write_to_file:
+            write_scene_intrinsics(camera_name, scene_dir, new_camera_intrinsics_dict, raw=False)
 
         new_frame_ids = np.arange(synced_df_renumbered.shape[0])
 

@@ -11,7 +11,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 from calculate_extrinsic import CameraOptiExtrinsicCalculator
 from data_processing import CameraPoseSynchronizer
 from utils.affine_utils import invert_affine, rotvec_trans_from_affine_matrix
-from utils.camera_utils import load_intrinsics, load_distortion, load_extrinsics
+from utils.camera_utils import load_frame_intrinsics, load_distortion, load_extrinsics
 from utils.constants import EXTRINSICS_DIR
 from utils.datetime_utils import get_latest_str_from_str_time_list
 from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth
@@ -46,7 +46,7 @@ def main():
         scene_metadata = yaml.safe_load(file)
 
     camera_name = scene_metadata["camera"]
-    camera_intrinsic_matrix = load_intrinsics(camera_name)
+    camera_intrinsics_dict= load_frame_intrinsics(scene_dir, raw=False)
     camera_distortion_coefficients = load_distortion(camera_name)
     extrinsic = load_extrinsics(camera_name)
 
@@ -65,29 +65,36 @@ def main():
     for i in range(len(poses)):
         cv2.namedWindow("Poses_{0}".format(i))
         cv2.resizeWindow("Poses_{0}".format(i), 640, 360)
+    
+    while True:
+        for frame_id in frameids:
+            
+            opti_poses = [p[frame_id] for p in poses]
 
-    for frame_id in frameids:
-        
-        opti_poses = [p[frame_id] for p in poses]
+            frame = load_bgr(frames_dir, frame_id, "png")
+            frames = [np.copy(frame) for _ in range(len(poses))]
 
-        frame = load_bgr(frames_dir, frame_id, "png")
-        frames = [np.copy(frame) for _ in range(len(poses))]
+            sensor_to_optis = [opti_pose @ invert_affine(extrinsic) for opti_pose in opti_poses]
+            sensor_to_arucos = [opti_to_aruco @ sensor_to_opti for sensor_to_opti in sensor_to_optis]
+            aruco_to_sensors = [invert_affine(sensor_to_aruco) for sensor_to_aruco in sensor_to_arucos]
 
-        sensor_to_optis = [opti_pose @ invert_affine(extrinsic) for opti_pose in opti_poses]
-        sensor_to_arucos = [opti_to_aruco @ sensor_to_opti for sensor_to_opti in sensor_to_optis]
-        aruco_to_sensors = [invert_affine(sensor_to_aruco) for sensor_to_aruco in sensor_to_arucos]
+            rvecs_and_tvecs = [rotvec_trans_from_affine_matrix(aruco_to_sensor) for aruco_to_sensor in aruco_to_sensors]
 
-        rvecs_and_tvecs = [rotvec_trans_from_affine_matrix(aruco_to_sensor) for aruco_to_sensor in aruco_to_sensors]
+            for (rvec, tvec), frame in zip(rvecs_and_tvecs, frames):
+                cv2.aruco.drawAxis(frame, camera_intrinsics_dict[frame_id], camera_distortion_coefficients, rvec, tvec / 9, 0.01)  # Draw Axis
 
-        for (rvec, tvec), frame in zip(rvecs_and_tvecs, frames):
-            cv2.aruco.drawAxis(frame, camera_intrinsic_matrix, camera_distortion_coefficients, rvec, tvec / 9, 0.01)  # Draw Axis
+            frames = [cv2.resize(f, (640, 360)) for f in frames]
 
-        frames = [cv2.resize(f, (640, 360)) for f in frames]
+            for i, frame in enumerate(frames):
+                cv2.imshow("Poses_{0}".format(i), frame)
 
-        for i, frame in enumerate(frames):
-            cv2.imshow("Poses_{0}".format(i), frame)
+            cv2.waitKey(15)
 
-        cv2.waitKey(15)
+        print("View again? (y/n)")
+        if input().lower() == "y":
+            continue
+        else:
+            break
 
     for i in range(len(poses)):
         cv2.destroyWindow("Poses_{0}".format(i))
@@ -107,7 +114,7 @@ def main():
         frame = load_bgr(frames_dir, frame_id, "png")
         depth = load_depth(frames_dir, frame_id)
 
-        aruco_pose = calculate_aruco_from_bgr_and_depth(frame, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients, aruco_dict, parameters)
+        aruco_pose = calculate_aruco_from_bgr_and_depth(frame, depth, cam_scale, camera_intrinsics_dict[frame_id], camera_distortion_coefficients, aruco_dict, parameters)
 
         if aruco_pose:  # If there are markers found by detector
 

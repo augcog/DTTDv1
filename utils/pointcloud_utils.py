@@ -36,21 +36,23 @@ def pointcloud_from_rgb_depth(rgb, depth, depth_scale, intrinsic, distortion, pr
 
     return pcld
 
-def unproject_pixels(points, depths, intrinsic, distortion):
+def unproject_pixels(pixels, depths, depth_scale, intrinsic, distortion):
     f_x = intrinsic[0, 0]
     f_y = intrinsic[1, 1]
     c_x = intrinsic[0, 2]
     c_y = intrinsic[1, 2]
 
+    depths = depths.astype(np.float32) * depth_scale
+
     # Step 1. Undistort.
-    points_undistorted = cv2.undistortPoints(np.expand_dims(points, 1), intrinsic, distortion, P=intrinsic)
-    points_undistorted = np.squeeze(points_undistorted, axis=1)
+    pixels_undistorted = cv2.undistortPoints(np.expand_dims(pixels, 1), intrinsic, distortion, P=intrinsic)
+    pixels_undistorted = np.squeeze(pixels_undistorted, axis=1)
 
     # Step 2. Reproject.
-    pts_xyz = np.zeros((points_undistorted.shape[0], 3))
+    pts_xyz = np.zeros((pixels_undistorted.shape[0], 3))
 
-    pts_xyz[:,0] = (points_undistorted[:, 0] - c_x) / f_x * depths
-    pts_xyz[:,1] = (points_undistorted[:, 1] - c_y) / f_y * depths
+    pts_xyz[:,0] = (pixels_undistorted[:, 0] - c_x) / f_x * depths
+    pts_xyz[:,1] = (pixels_undistorted[:, 1] - c_y) / f_y * depths
     pts_xyz[:,2] = depths
 
     return pts_xyz

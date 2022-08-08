@@ -10,7 +10,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 from data_processing import CameraPoseSynchronizer
 from pose_refinement import ScenePoseRefiner
 from utils.affine_utils import invert_affine
-from utils.camera_utils import load_extrinsics, load_distortion, load_intrinsics
+from utils.camera_utils import load_extrinsics, load_distortion, load_frame_intrinsics
 from utils.constants import SCENES_DIR
 from utils.frame_utils import load_rgb, load_depth
 from utils.object_utils import load_object_meshes
@@ -59,7 +59,7 @@ def main():
 
     camera_name = scene_metadata["camera"]
 
-    camera_intrinsics = load_intrinsics(camera_name)
+    camera_intrinsics_dict = load_frame_intrinsics(scene_dir, raw=False)
     camera_distortion = load_distortion(camera_name)
     camera_extrinsics = load_extrinsics(camera_name, scene_dir)
 
@@ -101,7 +101,7 @@ def main():
         obj_pcld = obj_pcld.transform(sensor_pose_in_annotated_coordinates_inv)
         objects_in_sensor_coords[obj_id] = obj_pcld
     
-    camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics, camera_distortion)
+    camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[frame_id], camera_distortion)
 
     pose_refinement_icp = scene_pose_refiner.refine_pose_icp(list(objects_in_sensor_coords.values()), camera_pcld)
 

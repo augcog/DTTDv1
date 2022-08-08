@@ -9,7 +9,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine, affine_matrix_from_rotvec_trans, average_quaternion, rotvec_trans_from_affine_matrix
-from utils.camera_utils import load_intrinsics, load_distortion, write_extrinsics
+from utils.camera_utils import load_frame_intrinsics, load_distortion, write_extrinsics
 from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth
 
 class CameraOptiExtrinsicCalculator():
@@ -63,7 +63,7 @@ class CameraOptiExtrinsicCalculator():
             scene_metadata = yaml.safe_load(file)
 
         camera_name = scene_metadata["camera"]
-        camera_intrinsic_matrix = load_intrinsics(camera_name)
+        camera_intrinsics_dict = load_frame_intrinsics(scene_dir, raw=False)
         camera_distortion_coefficients = load_distortion(camera_name)
 
         cam_scale = scene_metadata["cam_scale"]
@@ -79,10 +79,11 @@ class CameraOptiExtrinsicCalculator():
         parameters = cv2.aruco.DetectorParameters_create()
 
         for frame_id, opti_pose in tqdm(synchronized_poses.items(), total=len(synchronized_poses), desc="Finding ARUCO"):
+
             frame = load_bgr(frames_dir, frame_id, "png")
             depth = load_depth(frames_dir, frame_id)
 
-            aruco_pose = calculate_aruco_from_bgr_and_depth(frame, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients, aruco_dict, parameters)
+            aruco_pose = calculate_aruco_from_bgr_and_depth(frame, depth, cam_scale, camera_intrinsics_dict[frame_id], camera_distortion_coefficients, aruco_dict, parameters)
 
             if aruco_pose:  # If there are markers found by detector
 
@@ -181,12 +182,12 @@ class CameraOptiExtrinsicCalculator():
 
             rvec, tvec = rotvec_trans_from_affine_matrix(aruco_to_sensor)
 
-            cv2.aruco.drawAxis(frame, camera_intrinsic_matrix, camera_distortion_coefficients, rvec, tvec / 9, 0.01)  # Draw Axis
+            cv2.aruco.drawAxis(frame, camera_intrinsics_dict[frame_id], camera_distortion_coefficients, rvec, tvec / 9, 0.01)  # Draw Axis
 
             #NOTE: Here, we use cv2.aruco.estimatePoseSingleMarkers instead of our own aruco pose function in order to get a less influenced visualization
             aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
             parameters = cv2.aruco.DetectorParameters_create()
-            corners, ids, rejected_img_points = cv2.aruco.detectMarkers(frame_2, aruco_dict, parameters=parameters, cameraMatrix=camera_intrinsic_matrix, distCoeff=camera_distortion_coefficients)
+            corners, ids, rejected_img_points = cv2.aruco.detectMarkers(frame_2, aruco_dict, parameters=parameters, cameraMatrix=camera_intrinsics_dict[frame_id], distCoeff=camera_distortion_coefficients)
 
             if np.all(ids is not None):  # If there are markers found by detector
 
@@ -194,13 +195,13 @@ class CameraOptiExtrinsicCalculator():
                 assert(len(ids) == 1)
                 corners = corners[0]  # Iterate in markers
                 # Estimate pose of each marker and return the values rvec and tvec---different from camera coefficients
-                rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners, 0.02, camera_intrinsic_matrix, camera_distortion_coefficients)
+                rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners, 0.02, camera_intrinsics_dict[frame_id], camera_distortion_coefficients)
 
                 #the aruco estimator assumes the marker is of size 5cmx5cm, we are using a marker of size 15cmx15cm
                 rvec = rvec.squeeze()
                 tvec = tvec.squeeze()
 
-                cv2.aruco.drawAxis(frame_2, camera_intrinsic_matrix, camera_distortion_coefficients, rvec, tvec, 0.01)  # Draw Axis
+                cv2.aruco.drawAxis(frame_2, camera_intrinsics_dict[frame_id], camera_distortion_coefficients, rvec, tvec, 0.01)  # Draw Axis
 
             cv2.imshow("original ARUCO", frame_2)
             cv2.imshow("computed extrinsic validation", frame)

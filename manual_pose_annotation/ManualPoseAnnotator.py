@@ -24,7 +24,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from pose_refinement import ScenePoseRefiner
 from utils.affine_utils import invert_affine
-from utils.camera_utils import load_distortion, load_extrinsics, load_intrinsics, write_archive_extrinsic 
+from utils.camera_utils import load_distortion, load_extrinsics, load_frame_intrinsics, write_archive_extrinsic 
 from utils.depth_utils import fill_missing
 from utils.frame_utils import load_bgr, load_rgb, load_depth, load_o3d_rgb, load_o3d_depth
 from utils.pointcloud_utils import pointcloud_from_rgb_depth
@@ -161,18 +161,23 @@ class ManualPoseAnnotator:
         cam_scale = scene_metadata["cam_scale"]
         num_frames = scene_metadata["num_frames"]
 
-        camera_intrinsic_matrix = load_intrinsics(camera_name)
+        camera_intrinsics_dict = load_frame_intrinsics(scene_dir, raw=False)
         camera_distortion_coefficients = load_distortion(camera_name)
         camera_extrinsic = load_extrinsics(camera_name, scene_dir, use_archive=use_archive_extrinsic)
+        
+        print("archiving extrinsic!")
+        write_archive_extrinsic(camera_extrinsic, scene_dir)
 
         rgb = load_rgb(frames_dir, frameid, "jpg")
         depth = load_depth(frames_dir, frameid)
         h, w, _ = rgb.shape
 
-        camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
+        camera_intrinsic_annotate_frame = camera_intrinsics_dict[frameid]
+
+        camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_annotate_frame, camera_distortion_coefficients)
 
         if initialization_method:
-            initial_poses = initialization_method(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients, self._objects)
+            initial_poses = initialization_method(rgb, depth, cam_scale, camera_intrinsic_annotate_frame, camera_distortion_coefficients, self._objects)
         else:
             initial_poses = {}
             for obj_id in self._objects.keys():
@@ -200,7 +205,8 @@ class ManualPoseAnnotator:
         sdf_trunc = voxel_size * 5
 
         intr = o3d.camera.PinholeCameraIntrinsic()
-        intr.set_intrinsics(w, h, camera_intrinsic_matrix[0][0], camera_intrinsic_matrix[1][1], camera_intrinsic_matrix[0][2], camera_intrinsic_matrix[1][2])
+        intr.set_intrinsics(w, h, camera_intrinsic_annotate_frame[0][0], camera_intrinsic_annotate_frame[1][1], 
+            camera_intrinsic_annotate_frame[0][2], camera_intrinsic_annotate_frame[1][2])
 
         volume = o3d.integration.ScalableTSDFVolume(
             voxel_length=voxel_size,
@@ -339,7 +345,7 @@ class ManualPoseAnnotator:
             rgb = load_rgb(frames_dir, new_frameid, "jpg")
             depth = load_depth(frames_dir, new_frameid)
 
-            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[new_frameid], camera_distortion_coefficients)
 
             vis.remove_geometry(camera_representations[0], reset_bounding_box=False)
             camera_representations[0] = camera_pcld
@@ -374,7 +380,7 @@ class ManualPoseAnnotator:
             rgb = load_rgb(frames_dir, new_frameid, "jpg")
             depth = load_depth(frames_dir, new_frameid)
 
-            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[new_frameid], camera_distortion_coefficients)
 
             vis.remove_geometry(camera_representations[0], reset_bounding_box=False)
             camera_representations[0] = camera_pcld
@@ -409,7 +415,7 @@ class ManualPoseAnnotator:
             rgb = load_rgb(frames_dir, new_frameid, "jpg")
             depth = load_depth(frames_dir, new_frameid)
 
-            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_matrix, camera_distortion_coefficients)
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[new_frameid], camera_distortion_coefficients)
 
             vis.remove_geometry(camera_representations[0], reset_bounding_box=False)
             camera_representations[0] = camera_pcld
@@ -489,7 +495,7 @@ class ManualPoseAnnotator:
                 obj_pts_in_sensor_coordinates = np.array(obj_pcld_in_sensor_coordinates.points)
 
                 #(Nx2)
-                obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsic_matrix, camera_distortion_coefficients)
+                obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics_dict[curr_frameid], camera_distortion_coefficients)
                 obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
 
                 for pt_x, pt_y in obj_pts_projected:
@@ -851,8 +857,5 @@ class ManualPoseAnnotator:
             print("WARNING!! This might lead to error, try not to overlap so much!")
 
         annotated_poses = annotated_poses_collision
-
-        print("archiving extrinsic!")
-        write_archive_extrinsic(camera_extrinsic, scene_dir)
 
         return annotated_poses
