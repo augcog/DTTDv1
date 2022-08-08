@@ -96,9 +96,11 @@ class CameraController: NSObject, ObservableObject {
         let day = calendar.component(.day, from: date)
         let hour = calendar.component(.hour, from: date)
         let minutes = calendar.component(.minute, from: date)
-        let cur_date = String(year) + "-" + String(month) + "-" + String(day) + "-" + String(hour) + ":" + String(minutes)
+        let seconds = calendar.component(.second, from: date)
+        let cur_date = String(format: "%04d", year) + "-" + String(format: "%02d", month) + "-" + String(format: "%02d", day) + "-" + String(format: "%02d", hour) + "-" + String(format: "%02d", minutes) + "-" + String(format: "%02d",seconds)
         let folder_url = root_url!.appendingPathComponent(cur_date)
         try? manager.createDirectory(at: folder_url, withIntermediateDirectories: true)
+        // 2022-08-05-14-49-00
         return folder_url
     }
     
@@ -285,25 +287,58 @@ class CameraController: NSObject, ObservableObject {
         self.timestamps += String(timestamp.seconds - start_timestamp) + ","
     }
     
-    func save_camera_calib_data(from cameraCalibrationData: AVCameraCalibrationData, intrinsic_url : URL, calibration_url: URL, inverse_lookup_table_url: URL){
-        
-        var cameraIntrinsic : String = "Camera Intrinsic: \n"
-        cameraIntrinsic += "["
+    func matrix_to_string(from matrix : matrix_float3x3, name : String) -> String{
+        var matrix_name = name
+        matrix_name += "["
         for i in 0...2{
-            cameraIntrinsic += "["
+            matrix_name += "["
             for j in 0...2{
-                cameraIntrinsic += String(cameraCalibrationData.intrinsicMatrix[i][j]) + ","
+                matrix_name += String(matrix[i][j]) + ","
             }
-            cameraIntrinsic = String(cameraIntrinsic.dropLast())
-            cameraIntrinsic += "],\n"
+            matrix_name = String(matrix_name.dropLast())
+            matrix_name += "],\n"
         }
-        cameraIntrinsic = String(cameraIntrinsic.dropLast(2))
-        cameraIntrinsic += "]"
+        matrix_name = String(matrix_name.dropLast(2))
+        matrix_name += "]"
+        return matrix_name
+    }
+    
+    func matrix_to_string(from matrix : matrix_float4x3, name : String) -> String{
+        var matrix_name = name
+        matrix_name += "["
+        for i in 0...3{
+            matrix_name += "["
+            for j in 0...2{
+                matrix_name += String(matrix[i][j]) + ","
+            }
+            matrix_name = String(matrix_name.dropLast())
+            matrix_name += "],\n"
+        }
+        matrix_name = String(matrix_name.dropLast(2))
+        matrix_name += "]"
+        return matrix_name
+    }
+    
+    func save_camera_calib_data(from cameraCalibrationData: AVCameraCalibrationData, calibration_url: URL, inverse_lookup_table_url: URL){
         
-        
+//        var cameraIntrinsic : String = "Camera Intrinsic: \n"
+//        cameraIntrinsic += "["
+//        for i in 0...2{
+//            cameraIntrinsic += "["
+//            for j in 0...2{
+//                cameraIntrinsic += String(cameraCalibrationData.intrinsicMatrix[i][j]) + ","
+//            }
+//            cameraIntrinsic = String(cameraIntrinsic.dropLast())
+//            cameraIntrinsic += "],\n"
+//        }
+//        cameraIntrinsic = String(cameraIntrinsic.dropLast(2))
+//        cameraIntrinsic += "]"
+
+        let cameraIntrinsic : String = matrix_to_string(from: cameraCalibrationData.intrinsicMatrix, name: "Camera Intrinsic: \n")
+        let cameraExtrinsic : String = matrix_to_string(from: cameraCalibrationData.extrinsicMatrix, name: "Camera Extrinsic: \n")
         let lensDistortionCenter : String = "Distortion Center: \n" +  String(Float(cameraCalibrationData.lensDistortionCenter.x)) + "," + String(Float(cameraCalibrationData.lensDistortionCenter.y))
-        let calibrationData : String = cameraIntrinsic + "\n" + lensDistortionCenter
-        
+        let calibrationData : String = cameraIntrinsic + "\n" + cameraExtrinsic + "\n" + lensDistortionCenter
+
         try? calibrationData.write(toFile: calibration_url.path, atomically: false, encoding: String.Encoding.utf8)
         try? cameraCalibrationData.inverseLensDistortionLookupTable!.write(to: inverse_lookup_table_url)
     }
@@ -318,14 +353,13 @@ class CameraController: NSObject, ObservableObject {
         if let img = rgb_img.jpegData(compressionQuality: 0.3) {
             let rgb_url = folder_url!.appendingPathComponent(String(frame_id) + ".jpeg")
             let depth_url = folder_url!.appendingPathComponent(String(frame_id) + ".bin")
-            let intrinsic_url = folder_url!.appendingPathComponent(String(frame_id) + "_intrinsic.bin")
             let calibration_url = folder_url!.appendingPathComponent(String(frame_id) + "_calibration.txt")
             let inverse_lookup_table_url = folder_url!.appendingPathComponent(String(frame_id) + "_distortion_table.bin")
             
             try! img.write(to: rgb_url)
             save_depth_data(from: depthDataMap, url: depth_url)
             save_timestamp_data(from: timestamp)
-            save_camera_calib_data(from: cameraCalibrationData, intrinsic_url:intrinsic_url, calibration_url: calibration_url, inverse_lookup_table_url: inverse_lookup_table_url)
+            save_camera_calib_data(from: cameraCalibrationData, calibration_url: calibration_url, inverse_lookup_table_url: inverse_lookup_table_url)
             frame_id += 1
         }
     }

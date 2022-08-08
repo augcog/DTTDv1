@@ -124,6 +124,10 @@ class CameraOptiExtrinsicCalculator():
 
         for x in range(1, len(extrinsics)):
             rotation_diff = np.arccos((np.trace(extrinsics[x][:3,:3] @ np.linalg.inv(extrinsics_filtered[-1][:3,:3])) - 1.) / 2.)
+            
+            if np.isnan(rotation_diff):
+                rotation_diff = 1.
+
             translation_diff = np.linalg.norm(extrinsics[x][:3,3] - extrinsics_filtered[-1][:3,3])
 
             if rotation_diff > 0.03:
