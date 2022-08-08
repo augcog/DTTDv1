@@ -326,7 +326,7 @@ class IPhoneDataProcessor():
         threads = []
 
         for i in range(thread_count):
-            threads.append(threading.Thread(target=IPhoneDataProcessor.process_iphone_frames, args=(frame_ids[::thread_count], iphone_data_input, data_raw_output, intrs, dists)))
+            threads.append(threading.Thread(target=IPhoneDataProcessor.process_iphone_frames, args=(frame_ids[i::thread_count], iphone_data_input, data_raw_output, intrs, dists)))
         for i in range(thread_count):
             threads[i].start()
         for i in range(thread_count):
