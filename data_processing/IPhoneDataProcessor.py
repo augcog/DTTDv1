@@ -17,6 +17,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 from utils.camera_utils import write_frame_intrinsics
 from utils.constants import IPHONE_COLOR_WIDTH, IPHONE_COLOR_HEIGHT, IPHONE_DEPTH_WIDTH, IPHONE_DEPTH_HEIGHT
 from utils.frame_utils import write_bgr, write_depth
+from utils.pointcloud_utils import unproject_pixels
 
 class IPhoneDataProcessor():
     def __init__(self):
@@ -145,7 +146,6 @@ class IPhoneDataProcessor():
         depth_undistorted = depth_undistorted_flattened.reshape((h, w)).astype(np.uint16)
 
         return depth_undistorted
-        
 
     @staticmethod
     def read_byte_float_file(file):
@@ -188,7 +188,57 @@ class IPhoneDataProcessor():
             dist_center = [float(x) for x in f.readline().rstrip().split(',') if len(x) > 0]
 
             return intr, dist_center
-        
+
+    @staticmethod
+    def compute_distortion_coeffs(depth, lookup_table, distortion_center, intr):
+        # Test distortion parameter fitting
+        num_sampled_points = 20000
+
+        y_sampled = np.round(np.arange(0, IPHONE_COLOR_HEIGHT, IPHONE_COLOR_HEIGHT / num_sampled_points))
+        x_sampled = np.round(np.arange(0, IPHONE_COLOR_WIDTH, IPHONE_COLOR_WIDTH / num_sampled_points))
+
+        np.random.shuffle(y_sampled)
+        np.random.shuffle(x_sampled)
+
+        y_sampled = np.expand_dims(y_sampled, 1)
+        x_sampled = np.expand_dims(x_sampled, 1)
+
+        points_sampled = np.concatenate((x_sampled, y_sampled), 1)
+
+        h, w = depth.shape
+
+        undistorted_idxs = np.expand_dims(points_sampled, 0)
+
+        distorted_pts_x, distorted_pts_y = IPhoneDataProcessor.compute_distorted_pt(lookup_table, distortion_center, w, h, undistorted_idxs)
+
+        distorted_pts_x = distorted_pts_x.squeeze()
+        distorted_pts_y = distorted_pts_y.squeeze()
+
+        distorted_pts = np.concatenate((np.expand_dims(distorted_pts_x, 1), np.expand_dims(distorted_pts_y, 1)), 1)
+
+        flattened_sampled = np.round(np.round(distorted_pts_y) * IPHONE_COLOR_WIDTH + distorted_pts_x).astype(int)
+        flattened_sampled_clipped = np.clip(flattened_sampled, 0 , h * w - 1)
+
+        depths_sampled = depth.flatten()[flattened_sampled_clipped]
+        depths_sampled[flattened_sampled < 0] = 0
+        depths_sampled[flattened_sampled > h * w - 1] = 0
+
+        points_sampled_3d = unproject_pixels(points_sampled, depths_sampled, 0.001, intr, None)
+
+        mask = points_sampled_3d[:,2] > 0
+
+        distorted_pts = distorted_pts[mask]
+        points_sampled = points_sampled[mask]
+        points_sampled_3d = points_sampled_3d[mask]
+
+        points_sampled_3d = np.expand_dims(points_sampled_3d.astype(np.float32), 0)
+        distorted_pts = np.expand_dims(distorted_pts.astype(np.float32), 0)
+
+        flags = cv2.CALIB_USE_INTRINSIC_GUESS | cv2.CALIB_RATIONAL_MODEL | cv2.CALIB_FIX_PRINCIPAL_POINT
+        ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(points_sampled_3d, distorted_pts, (w, h), np.ascontiguousarray(intr.astype(np.float32)), None, flags=flags)
+
+        return dist
+
     @staticmethod
     def process_iphone_frameids(iphone_data_input, data_raw_output, frame_ids):
         for frame_id in tqdm(frame_ids, total=len(frame_ids), desc="undistorting frames"):
@@ -198,12 +248,6 @@ class IPhoneDataProcessor():
 
             lookup_table = IPhoneDataProcessor.read_byte_float_file(lookup_table_file)
             intr, distortion_center = IPhoneDataProcessor.read_calib_file(calib_file)
-            
-            color = cv2.imread(color_file, cv2.IMREAD_UNCHANGED)
-            color_undistorted = IPhoneDataProcessor.undistort_color(color, lookup_table, distortion_center)
-
-            # Color image is sideways
-            write_bgr(data_raw_output, frame_id, color_undistorted, "jpg")
 
             depth_old = os.path.join(iphone_data_input, "{0}.bin".format(frame_id))
             depth_arr = []
@@ -224,7 +268,15 @@ class IPhoneDataProcessor():
             # Interpolate nearest for depth -> color size
             depth = cv2.resize(depth, (IPHONE_COLOR_WIDTH, IPHONE_COLOR_HEIGHT), cv2.INTER_NEAREST)
 
-            depth_undistorted = IPhoneDataProcessor.undistort_depth(depth, lookup_table, distortion_center)
+            distortion_coeffs = IPhoneDataProcessor.compute_distortion_coeffs(depth, lookup_table, distortion_center, intr)
+
+            color = cv2.imread(color_file, cv2.IMREAD_UNCHANGED)
+            color_undistorted = cv2.undistort(color, intr, distortion_coeffs, None, None)
+
+            # Color image is sideways
+            write_bgr(data_raw_output, frame_id, color_undistorted, "jpg")
+
+            depth_undistorted = cv2.undistort(depth, intr, distortion_coeffs, None, None)
 
             write_depth(data_raw_output, frame_id, depth_undistorted)
 
