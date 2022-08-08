@@ -16,7 +16,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
-from utils.camera_utils import load_distortion, load_extrinsics, load_frame_intrinsics
+from utils.camera_utils import load_frame_distortions, load_extrinsics, load_frame_intrinsics
 from utils.frame_utils import load_depth, load_rgb, load_bgr
 from utils.pointcloud_utils import apply_affine_to_points, pointcloud_from_rgb_depth
 from utils.pose_dataframe_utils import convert_pose_dict_to_df
@@ -72,7 +72,7 @@ class ScenePoseRefiner():
         camera_name = scene_metadata["camera"]
 
         camera_intrinsics_dict = load_frame_intrinsics(scene_dir, raw=False)
-        camera_distortion = load_distortion(camera_name)
+        camera_distortions_dict = load_frame_distortions(scene_dir, raw=False)
         camera_extrinsics = load_extrinsics(camera_name, scene_dir)
 
         cam_scale = scene_metadata["cam_scale"]
@@ -113,7 +113,7 @@ class ScenePoseRefiner():
                     obj_pcld = obj_pcld.transform(sensor_pose_in_annotated_coordinates_inv)
                     objects_in_sensor_coords[obj_id] = obj_pcld
                 
-                camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[frame_id], camera_distortion)
+                camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[frame_id], camera_distortions_dict[frame_id])
 
                 #1 -> 2
                 pose_refinement_icp = self.refine_pose_icp(list(objects_in_sensor_coords.values()), camera_pcld)
@@ -168,14 +168,14 @@ class ScenePoseRefiner():
                         obj_pts_in_sensor_coordinates = np.array(obj_pcld_in_sensor_coordinates.points)
 
                         #(Nx2)
-                        obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortion)
+                        obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortions_dict[frame_ids[frame_ids_idx]])
                         obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
 
                         for pt_x, pt_y in obj_pts_projected:
                             bgr = cv2.circle(bgr, (int(pt_x), int(pt_y)), 1, color=colors[idx % len(colors)], thickness=-1)
 
                         if show_bb:
-                            obj_bb_projected, _ = cv2.projectPoints(obj_bb, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortion)
+                            obj_bb_projected, _ = cv2.projectPoints(obj_bb, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortions_dict[frame_ids[frame_ids_idx]])
                             bb_proj = np.round(obj_bb_projected.squeeze(1)).astype(int)
 
                             bgr = cv2.line(bgr, (int(bb_proj[0][0]), int(bb_proj[0][1])), (int(bb_proj[1][0]), int(bb_proj[1][1])), color=(0,0,0), thickness=1)
@@ -211,7 +211,7 @@ class ScenePoseRefiner():
                 bgr = load_bgr(frames_dir, frame_ids[frame_ids_idx], "jpg")
                 depth = load_depth(frames_dir, frame_ids[frame_ids_idx])
 
-                pcld_in_sensor_coordinates = pointcloud_from_rgb_depth(bgr, depth, cam_scale, camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortion, prune_zero=True)
+                pcld_in_sensor_coordinates = pointcloud_from_rgb_depth(bgr, depth, cam_scale, camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortions_dict[frame_ids[frame_ids_idx]], prune_zero=True)
                 points = np.array(pcld_in_sensor_coordinates.points)
                 pcld_colors = np.array(pcld_in_sensor_coordinates.colors)
 
@@ -229,7 +229,7 @@ class ScenePoseRefiner():
 
                 out = np.zeros_like(bgr)
 
-                scene_pcld_projected, _ = cv2.projectPoints(pcld_in_cam2_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortion)
+                scene_pcld_projected, _ = cv2.projectPoints(pcld_in_cam2_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortions_dict[frame_ids[frame_ids_idx]])
                 scene_pcld_projected = np.round(scene_pcld_projected.squeeze(1)).astype(int)
 
                 for (pt_x, pt_y), (b, g, r) in zip(scene_pcld_projected, pcld_colors):
@@ -245,7 +245,7 @@ class ScenePoseRefiner():
 
                     obj_pts_in_cam2 = apply_affine_to_points(obj_pts, invert_affine(cam2_in_cam1))
 
-                    obj_pts_in_cam2_projected, _ = cv2.projectPoints(obj_pts_in_cam2, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortion)
+                    obj_pts_in_cam2_projected, _ = cv2.projectPoints(obj_pts_in_cam2, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortions_dict[frame_ids[frame_ids_idx]])
                     obj_pts_in_cam2_projected = np.round(obj_pts_in_cam2_projected.squeeze(1)).astype(int)
 
                     for (pt_x, pt_y) in obj_pts_in_cam2_projected:
@@ -257,7 +257,7 @@ class ScenePoseRefiner():
 
                     obj_bb_in_cam2 = apply_affine_to_points(obj_bb, invert_affine(cam2_in_cam1))
 
-                    obj_bb_projected, _ = cv2.projectPoints(obj_bb_in_cam2, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortion)
+                    obj_bb_projected, _ = cv2.projectPoints(obj_bb_in_cam2, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_ids[frame_ids_idx]], camera_distortions_dict[frame_ids[frame_ids_idx]])
                     bb_proj = np.round(obj_bb_projected.squeeze(1)).astype(int)
 
                     out = cv2.line(out, (int(bb_proj[0][0]), int(bb_proj[0][1])), (int(bb_proj[1][0]), int(bb_proj[1][1])), color=(0,255,100), thickness=1)

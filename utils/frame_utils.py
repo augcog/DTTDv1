@@ -10,8 +10,15 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 def validate_extension(ext):
-    if ext not in ["jpg", "png"]:
+    if ext not in ["jpeg", "jpg", "png"]:
         raise "Invalid Extension! {0}".format(ext)
+
+def extension_match(ext1, ext2):
+    if ext1 == ext2:
+        return True
+    if ext1 in ["jpeg", "jpg"] and ext2 in ["jpeg", "jpg"]:
+        return True
+    return False
 
 def write_bgr(frames_dir, frame_id, frame, ext):
     validate_extension(ext)
@@ -45,10 +52,21 @@ def transfer_color(old_frames_dir, old_frame_id, old_ext, new_frames_dir, new_fr
     validate_extension(new_ext)
     old_frame_name = os.path.join(old_frames_dir, str(old_frame_id).zfill(5) + "_color.{0}".format(old_ext))
     new_frame_name = os.path.join(new_frames_dir, str(new_frame_id).zfill(5) + "_color.{0}".format(new_ext))
-    if old_ext == new_ext:
+    if extension_match(old_ext, new_ext):
         shutil.copyfile(old_frame_name, new_frame_name)
     else:
         img = cv2.imread(old_frame_name, cv2.IMREAD_UNCHANGED)
+        cv2.imwrite(new_frame_name, img)
+
+def transfer_color_file(color_file, new_frames_dir, new_frame_id, new_ext):
+    old_ext = color_file[color_file.rfind(".") + 1:]
+    validate_extension(old_ext)
+    validate_extension(new_ext)
+    new_frame_name = os.path.join(new_frames_dir, str(new_frame_id).zfill(5) + "_color.{0}".format(new_ext))
+    if extension_match(old_ext, new_ext):
+        shutil.copyfile(color_file, new_frame_name)
+    else:
+        img = cv2.imread(color_file, cv2.IMREAD_UNCHANGED)
         cv2.imwrite(new_frame_name, img)
 
 def get_color_ext(frames_dir):

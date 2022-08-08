@@ -24,7 +24,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from pose_refinement import ScenePoseRefiner
 from utils.affine_utils import invert_affine
-from utils.camera_utils import load_distortion, load_extrinsics, load_frame_intrinsics, write_archive_extrinsic 
+from utils.camera_utils import load_frame_distortions, load_extrinsics, load_frame_intrinsics, write_archive_extrinsic 
 from utils.depth_utils import fill_missing
 from utils.frame_utils import load_bgr, load_rgb, load_depth, load_o3d_rgb, load_o3d_depth
 from utils.pointcloud_utils import pointcloud_from_rgb_depth
@@ -162,7 +162,7 @@ class ManualPoseAnnotator:
         num_frames = scene_metadata["num_frames"]
 
         camera_intrinsics_dict = load_frame_intrinsics(scene_dir, raw=False)
-        camera_distortion_coefficients = load_distortion(camera_name)
+        camera_distortions_dict = load_frame_distortions(scene_dir, raw=False)
         camera_extrinsic = load_extrinsics(camera_name, scene_dir, use_archive=use_archive_extrinsic)
         
         print("archiving extrinsic!")
@@ -173,11 +173,12 @@ class ManualPoseAnnotator:
         h, w, _ = rgb.shape
 
         camera_intrinsic_annotate_frame = camera_intrinsics_dict[frameid]
+        camera_distortion_annotate_frame = camera_distortions_dict[frameid]
 
-        camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_annotate_frame, camera_distortion_coefficients)
+        camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsic_annotate_frame, camera_distortion_annotate_frame)
 
         if initialization_method:
-            initial_poses = initialization_method(rgb, depth, cam_scale, camera_intrinsic_annotate_frame, camera_distortion_coefficients, self._objects)
+            initial_poses = initialization_method(rgb, depth, cam_scale, camera_intrinsic_annotate_frame, camera_distortion_annotate_frame, self._objects)
         else:
             initial_poses = {}
             for obj_id in self._objects.keys():
@@ -345,7 +346,7 @@ class ManualPoseAnnotator:
             rgb = load_rgb(frames_dir, new_frameid, "jpg")
             depth = load_depth(frames_dir, new_frameid)
 
-            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[new_frameid], camera_distortion_coefficients)
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[new_frameid], camera_distortions_dict[new_frameid])
 
             vis.remove_geometry(camera_representations[0], reset_bounding_box=False)
             camera_representations[0] = camera_pcld
@@ -380,7 +381,7 @@ class ManualPoseAnnotator:
             rgb = load_rgb(frames_dir, new_frameid, "jpg")
             depth = load_depth(frames_dir, new_frameid)
 
-            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[new_frameid], camera_distortion_coefficients)
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[new_frameid], camera_distortions_dict[new_frameid])
 
             vis.remove_geometry(camera_representations[0], reset_bounding_box=False)
             camera_representations[0] = camera_pcld
@@ -415,7 +416,7 @@ class ManualPoseAnnotator:
             rgb = load_rgb(frames_dir, new_frameid, "jpg")
             depth = load_depth(frames_dir, new_frameid)
 
-            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[new_frameid], camera_distortion_coefficients)
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[new_frameid], camera_distortions_dict[new_frameid])
 
             vis.remove_geometry(camera_representations[0], reset_bounding_box=False)
             camera_representations[0] = camera_pcld
@@ -495,7 +496,7 @@ class ManualPoseAnnotator:
                 obj_pts_in_sensor_coordinates = np.array(obj_pcld_in_sensor_coordinates.points)
 
                 #(Nx2)
-                obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics_dict[curr_frameid], camera_distortion_coefficients)
+                obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics_dict[curr_frameid], camera_distortions_dict[curr_frameid])
                 obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
 
                 for pt_x, pt_y in obj_pts_projected:

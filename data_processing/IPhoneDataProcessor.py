@@ -3,10 +3,9 @@ Cleans the exported tracking data output of the OptiTrack
 """
 
 import cv2
-from multiprocessing import Process
 import numpy as np
-from scipy import interpolate
 import struct
+import threading
 from tqdm import tqdm
 import yaml
 
@@ -14,9 +13,9 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from utils.camera_utils import write_frame_intrinsics
+from utils.camera_utils import write_frame_distortions, write_frame_intrinsics
 from utils.constants import IPHONE_COLOR_WIDTH, IPHONE_COLOR_HEIGHT, IPHONE_DEPTH_WIDTH, IPHONE_DEPTH_HEIGHT
-from utils.frame_utils import write_bgr, write_depth
+from utils.frame_utils import transfer_color_file, write_depth
 from utils.pointcloud_utils import unproject_pixels
 
 class IPhoneDataProcessor():
@@ -240,8 +239,8 @@ class IPhoneDataProcessor():
         return dist
 
     @staticmethod
-    def process_iphone_frameids(iphone_data_input, data_raw_output, frame_ids):
-        for frame_id in tqdm(frame_ids, total=len(frame_ids), desc="undistorting frames"):
+    def process_iphone_frames(frame_ids, iphone_data_input, data_raw_output, intrs, dists):
+        for frame_id in tqdm(frame_ids, total=len(frame_ids), desc="collecting intrinsics/distortions and moving frames"):
             lookup_table_file = os.path.join(iphone_data_input, "{0}_distortion_table.bin".format(frame_id))
             calib_file = os.path.join(iphone_data_input, "{0}_calibration.txt".format(frame_id))
             color_file = os.path.join(iphone_data_input, "{0}.jpeg".format(frame_id))
@@ -270,15 +269,11 @@ class IPhoneDataProcessor():
 
             distortion_coeffs = IPhoneDataProcessor.compute_distortion_coeffs(depth, lookup_table, distortion_center, intr)
 
-            color = cv2.imread(color_file, cv2.IMREAD_UNCHANGED)
-            color_undistorted = cv2.undistort(color, intr, distortion_coeffs, None, None)
+            intrs[frame_id] = intr
+            dists[frame_id] = distortion_coeffs
 
-            # Color image is sideways
-            write_bgr(data_raw_output, frame_id, color_undistorted, "jpg")
-
-            depth_undistorted = cv2.undistort(depth, intr, distortion_coeffs, None, None)
-
-            write_depth(data_raw_output, frame_id, depth_undistorted)
+            transfer_color_file(color_file, data_raw_output, frame_id, "jpg")
+            write_depth(data_raw_output, frame_id, depth)
 
     @staticmethod
     def process_iphone_scene_data(scene_dir, camera_name):
@@ -299,8 +294,7 @@ class IPhoneDataProcessor():
         frame_timestamps = [float(t) for t in timestamp_data[:-1]]
         capture_start_frame = int(timestamp_data[-1])
 
-        print(len(frame_timestamps))
-        print(len(frame_ids))
+        print("number of frames:", len(frame_ids))
 
         assert(len(frame_timestamps) == len(frame_ids))
 
@@ -324,26 +318,25 @@ class IPhoneDataProcessor():
 
         camera_data_output.close()
         camera_time_break_output.close()
-        
-        num_threads = 10
-        threads = []
-
-        for tid in range(num_threads):
-            thread = Process(target=IPhoneDataProcessor.process_iphone_frameids, args=(iphone_data_input, data_raw_output, frame_ids[tid::num_threads]))
-            threads.append(thread)
-        for tid in range(num_threads):
-            threads[tid].start()
-        for tid in range(num_threads):
-            threads[tid].join()
 
         intrs = {}
+        dists = {}
 
-        for frame_id in tqdm(frame_ids, total=len(frame_ids), desc="collecting intrinsics"):
-            calib_file = os.path.join(iphone_data_input, "{0}_calibration.txt".format(frame_id))
-            intr, _ = IPhoneDataProcessor.read_calib_file(calib_file)
-            intrs[frame_id] = intr
+        thread_count = 10
+        threads = []
+
+        for i in range(thread_count):
+            threads.append(threading.Thread(target=IPhoneDataProcessor.process_iphone_frames, args=(frame_ids[::thread_count], iphone_data_input, data_raw_output, intrs, dists)))
+        for i in range(thread_count):
+            threads[i].start()
+        for i in range(thread_count):
+            threads[i].join()
+
+        print("intrs:", len(intrs))
+        print("dists:", len(dists))
 
         write_frame_intrinsics(camera_name, scene_dir, intrs, raw=True)
+        write_frame_distortions(camera_name, scene_dir, dists, raw=True)
 
         scene_metadata = {}
         scene_metadata["cam_scale"] = 0.001

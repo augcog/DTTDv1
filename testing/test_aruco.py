@@ -1,6 +1,8 @@
 import argparse
+from collections import defaultdict
 import cv2
 import numpy as np
+import open3d as o3d
 from pyk4a import PyK4A, CalibrationType
 import yaml
 
@@ -8,8 +10,8 @@ import os, sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
-from utils.camera_utils import load_frame_intrinsics, load_distortion
-from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth, load_rgb, get_color_ext
+from utils.camera_utils import load_frame_intrinsics, load_frame_distortions
+from utils.frame_utils import calculate_aruco_from_bgr_and_depth, load_bgr, load_depth, load_rgb
 from utils.pointcloud_utils import pointcloud_from_rgb_depth
 
 '''
@@ -48,7 +50,7 @@ if __name__ == "__main__":
         camera_name = scene_metadata["camera"]
         cam_scale = scene_metadata["cam_scale"]
         camera_intrinsics_dict = load_frame_intrinsics(args.scene_dir, raw=False)
-        camera_dist = load_distortion(camera_name)
+        camera_dists_dict = load_frame_distortions(args.scene_dir, raw=False)
 
     else:
         # Modify camera configuration
@@ -57,7 +59,7 @@ if __name__ == "__main__":
 
         cam_scale = 0.001
         camera_matrix = k4a.calibration.get_camera_matrix(CalibrationType.COLOR)
-        camera_dist = k4a.calibration.get_distortion_coefficients(CalibrationType.COLOR)
+        camera_dists_dict = defaultdict(lambda: k4a.calibration.get_distortion_coefficients(CalibrationType.COLOR))
 
     while True:
         if not args.scene_dir:
@@ -82,13 +84,13 @@ if __name__ == "__main__":
                 print("out of frames at id {0}".format(img_id))
                 break
 
-        aruco_pose = calculate_aruco_from_bgr_and_depth(color_image, depth_image, 0.001, camera_matrix, camera_dist, dictionary, parameters)
+        aruco_pose = calculate_aruco_from_bgr_and_depth(color_image, depth_image, 0.001, camera_matrix, camera_dists_dict[img_id], dictionary, parameters)
 
         if aruco_pose:
 
             rvec, tvec, corners = aruco_pose
 
-            camera_pcld = pointcloud_from_rgb_depth(rgb, depth_image, 0.001, camera_matrix, camera_dist)
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth_image, 0.001, camera_matrix, camera_dists_dict[img_id])
             aruco_pcld = o3d.geometry.PointCloud()
             aruco_pcld.points = o3d.utility.Vector3dVector(tvec)
             o3d.io.write_point_cloud(os.path.join(output_dir, "{0}_camera.ply".format(img_id)), camera_pcld)
@@ -96,7 +98,7 @@ if __name__ == "__main__":
 
             (rvec - tvec).any()  # get rid of that nasty numpy value array error
             cv2.aruco.drawDetectedMarkers(color_image, corners)  # Draw A square around the markers
-            cv2.aruco.drawAxis(color_image, camera_matrix, camera_dist, rvec, tvec / 9, 0.01)  # Draw Axis
+            cv2.aruco.drawAxis(color_image, camera_matrix, camera_dists_dict[img_id], rvec, tvec / 9, 0.01)  # Draw Axis
 
             # Display the resulting frame
             cv2.imshow("image", color_image)

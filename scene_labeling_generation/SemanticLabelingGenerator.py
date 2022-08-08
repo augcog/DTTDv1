@@ -17,7 +17,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
-from utils.camera_utils import load_extrinsics, load_frame_intrinsics, load_distortion
+from utils.camera_utils import load_extrinsics, load_frame_intrinsics, load_frame_distortions
 from utils.frame_utils import load_bgr, load_rgb, write_debug_label, write_label, load_meta
 
 class SemanticLabelingGenerator():
@@ -41,7 +41,7 @@ class SemanticLabelingGenerator():
         camera_name = scene_metadata["camera"]
 
         camera_intrinsics_dict = load_frame_intrinsics(scene_dir, raw=False)
-        camera_distortion = load_distortion(camera_name)
+        camera_distortions_dict = load_frame_distortions(scene_dir, raw=False)
         camera_extrinsics = load_extrinsics(camera_name, scene_dir)
 
         sensor_to_virtual_extrinsic = invert_affine(camera_extrinsics)
@@ -91,7 +91,7 @@ class SemanticLabelingGenerator():
                 obj_pts = np.array(obj_pcld.points)
 
                 #(Nx2)
-                obj_pts_projected, _ = cv2.projectPoints(obj_pts, sensor_rvec, sensor_trans, camera_intrinsics_dict[frame_id], camera_distortion)
+                obj_pts_projected, _ = cv2.projectPoints(obj_pts, sensor_rvec, sensor_trans, camera_intrinsics_dict[frame_id], camera_distortions_dict[frame_id])
                 obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
 
                 for pt_x, pt_y in obj_pts_projected:
@@ -157,7 +157,7 @@ class SemanticLabelingGenerator():
         camera_name = scene_metadata["camera"]
 
         camera_intrinsics_dict = load_frame_intrinsics(scene_dir, raw=False)
-        camera_distortion = load_distortion(camera_name)
+        camera_distortions_dict = load_frame_distortions(scene_dir, raw=False)
 
         num_frames = scene_metadata["num_frames"]
 
@@ -188,7 +188,7 @@ class SemanticLabelingGenerator():
             for idx, (obj_id, obj_pts_in_sensor_coordinates) in enumerate(objects_in_sensor_coords.items()):
 
                 #(Nx2)
-                obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_id], camera_distortion)
+                obj_pts_projected, _ = cv2.projectPoints(obj_pts_in_sensor_coordinates, np.zeros(3), np.zeros(3), camera_intrinsics_dict[frame_id], camera_distortions_dict[frame_id])
                 obj_pts_projected = np.round(obj_pts_projected.squeeze(1)).astype(int)
 
                 for pt_x, pt_y in obj_pts_projected:
