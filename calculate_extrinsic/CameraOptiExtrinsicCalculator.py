@@ -34,7 +34,7 @@ class CameraOptiExtrinsicCalculator():
 
         opti_to_aruco = np.vstack((aruco_x, aruco_y, aruco_z))
         
-        # Round since there is probably error in ARUCO marker position leading to non-orthogonal aruco_x and aruco_y
+        # Round since there is probably error in opti marker position leading to non-orthogonal aruco_x and aruco_y
         opti_to_aruco = R.from_matrix(opti_to_aruco).as_matrix()
 
         aruco_center = np.mean(np.array([aruco_corners['quad1'], aruco_corners['quad2'], aruco_corners['quad3'], aruco_corners['quad4']]), axis=0)
