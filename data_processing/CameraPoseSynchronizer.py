@@ -114,14 +114,50 @@ class CameraPoseSynchronizer():
                 aruco_to_sensor[3,3] = 1
                 sensor_to_aruco = np.linalg.inv(aruco_to_sensor) # sensor -> aruco 
                 sensor_to_opti = aruco_to_opti @ sensor_to_aruco # sensor -> opti
-                xyz_pos = sensor_to_opti[:3, -1]
-                return xyz_pos
+                xyz_pos = sensor_to_opti[:3,-1]
 
+                # rot_mat = sensor_to_opti[:3,:3].flatten()
+                # out = np.zeros(12)
+                # out[:9] = rot_mat
+                # out[9:] = xyz_pos
+
+                return xyz_pos
             else:
-                x = np.array([0, 0, 0]).astype(np.float64)
-                return x
+                return np.zeros(3).astype(np.float64)
                 
         aruco_computed_virtual_to_opti = np.array(camera_calib_df.apply(calculate_virtual_to_opti, axis=1, result_type="expand")).astype(np.float64)
+
+        # """
+        # Filter aruco poses using rotation diff
+        # """
+
+        # good_poses = [0]
+        # rotation_diffs = []
+
+        # for idx in range(1, len(aruco_computed_virtual_to_opti)):
+
+        #     rot_prev = aruco_computed_virtual_to_opti[idx - 1][:9].reshape((3, 3))
+        #     rot_curr = aruco_computed_virtual_to_opti[idx][:9].reshape((3, 3))
+
+        #     if np.sum(rot_curr) == 0:
+        #         continue
+
+        #     rotation_diff = np.arccos((np.trace(rot_curr @ np.linalg.inv(rot_prev)) - 1.) / 2.)
+            
+        #     if np.isnan(rotation_diff):
+        #         rotation_diff = 1.
+
+        #     rotation_diffs.append(rotation_diff)
+
+        #     if rotation_diff < 0.4:
+        #         good_poses.append(idx)
+
+        # print("number of good ARUCO detections!", len(good_poses))
+
+        # cleaned_aruco_computed_virtual_to_opti = np.zeros((aruco_computed_virtual_to_opti.shape[0], 3))
+        # cleaned_aruco_computed_virtual_to_opti[good_poses] = aruco_computed_virtual_to_opti[good_poses][:,9:]
+        
+        # aruco_computed_virtual_to_opti = cleaned_aruco_computed_virtual_to_opti
 
         camera_calib_df["position_x"] = aruco_computed_virtual_to_opti[:,0]
         camera_calib_df["position_y"] = aruco_computed_virtual_to_opti[:,1]
