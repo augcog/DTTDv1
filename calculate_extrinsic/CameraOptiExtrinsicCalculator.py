@@ -1,4 +1,5 @@
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from tqdm import tqdm
@@ -32,6 +33,9 @@ class CameraOptiExtrinsicCalculator():
         aruco_z = np.expand_dims(aruco_z, -1).T
 
         opti_to_aruco = np.vstack((aruco_x, aruco_y, aruco_z))
+        
+        # Round since there is probably error in ARUCO marker position leading to non-orthogonal aruco_x and aruco_y
+        opti_to_aruco = R.from_matrix(opti_to_aruco).as_matrix()
 
         aruco_center = np.mean(np.array([aruco_corners['quad1'], aruco_corners['quad2'], aruco_corners['quad3'], aruco_corners['quad4']]), axis=0)
 
@@ -53,7 +57,7 @@ class CameraOptiExtrinsicCalculator():
         aff = affine_matrix_from_rotvec_trans(rot_vec, trans) #aruco -> camera
         aruco_to_opti = self.get_aruco_to_opti_transform()
         opti_to_aruco = invert_affine(aruco_to_opti)
-        affine_transform_opti = np.matmul(aff, opti_to_aruco) #1. opti -> aruco 2. aruco -> camera = opti -> camera
+        affine_transform_opti = aff @ opti_to_aruco #1. opti -> aruco 2. aruco -> camera = opti -> camera
         return invert_affine(affine_transform_opti) #camera -> opti
 
     def calculate_extrinsic(self, scene_dir, synchronized_poses, write_to_file=False):
@@ -122,6 +126,8 @@ class CameraOptiExtrinsicCalculator():
         rotation_skipped = 0
         translation_skipped = 0
 
+        good_frames = [0]
+
         for x in range(1, len(extrinsics)):
             rotation_diff = np.arccos((np.trace(extrinsics[x][:3,:3] @ np.linalg.inv(extrinsics_filtered[-1][:3,:3])) - 1.) / 2.)
             
@@ -135,6 +141,7 @@ class CameraOptiExtrinsicCalculator():
             elif translation_diff > 0.015:
                 translation_skipped += 1
             else:
+                good_frames.append(x)
                 extrinsics_filtered.append(extrinsics[x])
                 rotation_diffs_filtered.append(rotation_diff)
                 translation_diffs_filtered.append(translation_diff)
@@ -149,14 +156,22 @@ class CameraOptiExtrinsicCalculator():
             print("rotation diffs (min, max, mean)", np.min(rotation_diffs), np.max(rotation_diffs), np.mean(rotation_diffs))
             print("translation diffs (min, max, mean)", np.min(translation_diffs), np.max(translation_diffs), np.mean(translation_diffs))
 
-        print("Diffs after filtering")
-        print("rotation diffs (min, max, mean)", np.min(rotation_diffs_filtered), np.max(rotation_diffs_filtered), np.mean(rotation_diffs_filtered))
-        print("translation diffs (min, max, mean)", np.min(translation_diffs_filtered), np.max(translation_diffs_filtered), np.mean(translation_diffs_filtered))
+        if len(rotation_diffs_filtered) > 0:
+            print("Diffs after filtering")
+            print("rotation diffs (min, max, mean)", np.min(rotation_diffs_filtered), np.max(rotation_diffs_filtered), np.mean(rotation_diffs_filtered))
+            print("translation diffs (min, max, mean)", np.min(translation_diffs_filtered), np.max(translation_diffs_filtered), np.mean(translation_diffs_filtered))
 
         extrinsics = np.array(extrinsics_filtered)
         print("Remaining extrinsics: {0}".format(len(extrinsics)))
 
-        #return average extrinsic
+        plt.plot(np.arange(0, len(rotation_diffs)), rotation_diffs, label="rotation")
+        plt.plot(np.arange(0, len(translation_diffs)), translation_diffs, label="translation")
+        plt.legend()
+        plt.show()
+
+        """
+        Compute average extrinsic
+        """
 
         translation = np.mean(extrinsics[:,:3,3], axis=0)
 
@@ -169,12 +184,52 @@ class CameraOptiExtrinsicCalculator():
         extrinsic[:3,:3] = R.from_quat(quat).as_matrix()
         extrinsic[:3,3] = translation
 
-        #evaluate extrinsic by visualizing aruco axis using opti
-
+        """
+        Evaluate extrinsic
+        """
+        
         cv2.namedWindow("computed extrinsic validation")
         cv2.namedWindow("original ARUCO")
         opti_to_aruco = invert_affine(self.get_aruco_to_opti_transform())
-        sensor_to_virtual = invert_affine(extrinsic)
+
+        """
+        Visualizing good frames only
+        """
+        for frame_id in good_frames:
+            opti_pose = synchronized_poses[frame_id]
+            frame = load_bgr(frames_dir, frame_id, "png")
+            frame_2 = np.copy(frame)
+
+            sensor_to_opti = opti_pose @ invert_affine(extrinsic)
+            sensor_to_aruco = opti_to_aruco @ sensor_to_opti
+            aruco_to_sensor = invert_affine(sensor_to_aruco)
+
+            rvec, tvec = rotvec_trans_from_affine_matrix(aruco_to_sensor)
+
+            cv2.aruco.drawAxis(frame, camera_intrinsics_dict[frame_id], camera_distortion_coefficients_dict[frame_id], rvec, tvec / 9, 0.01)  # Draw Axis
+
+            #NOTE: Here, we use cv2.aruco.estimatePoseSingleMarkers instead of our own aruco pose function in order to get a less influenced visualization
+            aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
+            parameters = cv2.aruco.DetectorParameters_create()
+            corners, ids, rejected_img_points = cv2.aruco.detectMarkers(frame_2, aruco_dict, parameters=parameters, cameraMatrix=camera_intrinsics_dict[frame_id], distCoeff=camera_distortion_coefficients_dict[frame_id])
+
+            if np.all(ids is not None):  # If there are markers found by detector
+
+                #only should have 1 marker placed near origin of opti
+                assert(len(ids) == 1)
+                corners = corners[0]  # Iterate in markers
+                # Estimate pose of each marker and return the values rvec and tvec---different from camera coefficients
+                rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners, 0.02, camera_intrinsics_dict[frame_id], camera_distortion_coefficients_dict[frame_id])
+
+                #the aruco estimator assumes the marker is of size 5cmx5cm, we are using a marker of size 15cmx15cm
+                rvec = rvec.squeeze()
+                tvec = tvec.squeeze()
+
+                cv2.aruco.drawAxis(frame_2, camera_intrinsics_dict[frame_id], camera_distortion_coefficients_dict[frame_id], rvec, tvec, 0.01)  # Draw Axis
+
+            cv2.imshow("original ARUCO", frame_2)
+            cv2.imshow("computed extrinsic validation", frame)
+            cv2.waitKey(0)
 
         for frame_id, opti_pose in synchronized_poses.items():
             frame = load_bgr(frames_dir, frame_id, "png")
