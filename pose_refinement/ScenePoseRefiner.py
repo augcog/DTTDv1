@@ -167,11 +167,7 @@ class ScenePoseRefiner():
                     annotated_obj_pose = annotated_poses_single_frame[obj_id]
                     return annotated_obj_pose[2,3]
 
-                print(objs_and_bbs_in_sensor_coords)
-
                 objs_and_bbs_in_sensor_coords.sort(key=z_sort)
-
-                print(objs_and_bbs_in_sensor_coords)
 
                 bgr = load_bgr(frames_dir, frame_ids[frame_ids_idx], "jpg")
 
