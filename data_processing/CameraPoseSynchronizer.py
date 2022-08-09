@@ -114,12 +114,10 @@ class CameraPoseSynchronizer():
                 aruco_to_sensor[3,3] = 1
                 sensor_to_aruco = np.linalg.inv(aruco_to_sensor) # sensor -> aruco 
                 sensor_to_opti = aruco_to_opti @ sensor_to_aruco # sensor -> opti
-                xyz_pos = sensor_to_opti[:3, -1]
+                xyz_pos = sensor_to_opti[:3,-1]
                 return xyz_pos
-
             else:
-                x = np.array([0, 0, 0]).astype(np.float64)
-                return x
+                return np.zeros(3).astype(np.float64)
                 
         aruco_computed_virtual_to_opti = np.array(camera_calib_df.apply(calculate_virtual_to_opti, axis=1, result_type="expand")).astype(np.float64)
 
