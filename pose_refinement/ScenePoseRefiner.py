@@ -158,12 +158,25 @@ class ScenePoseRefiner():
 
                 for idx, (obj_id, (obj_mesh, obj_bb)) in enumerate(object_meshes_and_bbs.items()):
                     obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
-                    objs_and_bbs_in_sensor_coords.append((obj_in_sensor_coordinates, obj_bb))
+                    objs_and_bbs_in_sensor_coords.append((obj_id, obj_in_sensor_coordinates, obj_bb))
+
+                
+                #SORT OBJECTS BY Z-COORD
+                def z_sort(object_mesh_and_bb):
+                    obj_id, obj_mesh, obj_bb = object_mesh_and_bb
+                    annotated_obj_pose = annotated_poses_single_frame[obj_id]
+                    return annotated_obj_pose[2,3]
+
+                print(objs_and_bbs_in_sensor_coords)
+
+                objs_and_bbs_in_sensor_coords.sort(key=z_sort)
+
+                print(objs_and_bbs_in_sensor_coords)
 
                 bgr = load_bgr(frames_dir, frame_ids[frame_ids_idx], "jpg")
 
                 if show_objects:
-                    for idx, (obj_pcld_in_sensor_coordinates, obj_bb) in enumerate(objs_and_bbs_in_sensor_coords):
+                    for idx, (obj_id, obj_pcld_in_sensor_coordinates, obj_bb) in enumerate(objs_and_bbs_in_sensor_coords):
 
                         obj_pts_in_sensor_coordinates = np.array(obj_pcld_in_sensor_coordinates.points)
 

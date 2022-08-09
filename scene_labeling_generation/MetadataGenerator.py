@@ -15,7 +15,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.affine_utils import invert_affine
-from utils.camera_utils import load_frame_intrinsics, load_extrinsics
+from utils.camera_utils import load_frame_distortions, load_frame_intrinsics, load_extrinsics
 from utils.frame_utils import write_meta, load_label
 
 class MetadataGenerator():
@@ -35,6 +35,7 @@ class MetadataGenerator():
         camera_name = scene_metadata["camera"]
 
         camera_intrinsic_dict = load_frame_intrinsics(scene_dir, raw=False)
+        camera_distortion_dict = load_frame_distortions(scene_dir, raw=False)
         camera_extrinsics = load_extrinsics(camera_name, scene_dir)
 
         sensor_to_virtual_extrinsic = invert_affine(camera_extrinsics)
@@ -70,5 +71,6 @@ class MetadataGenerator():
             frame_metadata["objects"] = object_ids.tolist()
             frame_metadata["object_poses"] = object_poses_in_sensor
             frame_metadata["intrinsic"] = camera_intrinsic_dict[frame_id].tolist()
+            frame_metadata["distortion"] = camera_distortion_dict[frame_id].tolist()
 
             write_meta(frames_dir, frame_id, frame_metadata)
