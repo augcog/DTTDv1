@@ -129,7 +129,7 @@ class ScenePoseRefiner():
             frame_ids = [id for id in sorted(list(synchronized_poses_refined.keys())) if id != annotated_poses_single_frameid]
             frame_ids_idx = 0
 
-            frame_pose = synchronized_poses_refined[frame_ids[frame_ids_idx]]
+            frame_pose = synchronized_poses_refined[annotated_poses_single_frameid]
             sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ frame_pose
             current_pose = invert_affine(sensor_pose_in_annotated_coordinates)
 
@@ -145,7 +145,7 @@ class ScenePoseRefiner():
 
                 obj_bb = obj["mesh"].get_axis_aligned_bounding_box()
                 obj_bb_pts = np.array(obj_bb.get_box_points())
-                obj_bb_pts = apply_affine_to_points(obj_bb_pts, annotated_obj_pose)
+                obj_bb_pts = apply_affine_to_points(obj_bb_pts, current_pose @ annotated_obj_pose)
 
                 obj_mesh = obj["mesh"].transform(current_pose @ annotated_obj_pose)
                 object_meshes_and_bbs[obj_id] = (obj_mesh, obj_bb_pts)
