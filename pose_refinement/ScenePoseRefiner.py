@@ -129,7 +129,7 @@ class ScenePoseRefiner():
             frame_ids = [id for id in sorted(list(synchronized_poses_refined.keys())) if id != annotated_poses_single_frameid]
             frame_ids_idx = 0
 
-            frame_pose = synchronized_poses_refined[annotated_poses_single_frameid]
+            frame_pose = synchronized_poses_refined[frame_ids[frame_ids_idx]]
             sensor_pose_in_annotated_coordinates = sensor_pose_annotated_frame_inv @ frame_pose
             current_pose = invert_affine(sensor_pose_in_annotated_coordinates)
 
