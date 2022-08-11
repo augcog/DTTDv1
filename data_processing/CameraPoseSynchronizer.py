@@ -141,14 +141,12 @@ class CameraPoseSynchronizer():
         camera_calib_df = camera_calib_df[camera_calib_df.loc[:,'2d_distance'] > lower]
 
         op_df = cleaned_opti_poses
-        op_df.replace('', np.nan, inplace=True)
-        op_df = op_df.dropna()
 
         op_calib_df = op_df.copy()
         op_calib_df = op_calib_df.astype(np.float64)
 
         op_calib_df['2d_distance'] = np.sqrt(op_calib_df[position_x_key] ** 2 + op_calib_df[position_z_key] ** 2)
-        
+
         camera_pos = np.array(camera_calib_df['2d_distance']).astype(np.float32)
         camera_pos_zero_meaned = camera_pos - np.mean(camera_pos)
         camera_times = np.array(camera_calib_df['time_delta']).astype(np.float32)

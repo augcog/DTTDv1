@@ -3,6 +3,7 @@ Cleans the exported tracking data output of the OptiTrack
 """
 
 import csv
+import numpy as np
 import os
 import pandas as pd
 import yaml
@@ -55,6 +56,8 @@ class CameraPoseCleaner():
         headers = [h.replace(camera_name, "camera") for h in headers]
 
         df = pd.DataFrame(rows, columns=headers)
+        df.replace('', np.nan, inplace=True)
+        df = df.dropna()
 
         if write_cleaned_to_file:
             df.to_csv(camera_pose_cleaned_path)

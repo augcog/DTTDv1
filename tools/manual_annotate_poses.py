@@ -69,7 +69,7 @@ def main():
         with open(transfer_annotations_scene_meta_path, "r") as file:
             transfer_annotations_scene_meta = yaml.safe_load(file)
         transfer_annotations_camera_name = transfer_annotations_scene_meta["camera"]
-
+        
         # virtual -> sensor annot
         transfer_annotations_extrinsic = load_extrinsics(transfer_annotations_camera_name, scene_dir=args.transfer_annotations, use_archive=True)
 
