@@ -102,7 +102,7 @@ def main():
 
         initializer = our_init
 
-    elif args.use_prev and os.path.isfile(annotation_file):
+    elif args.use_prev and not args.frame and os.path.isfile(annotation_file):
         print("Using previous annotation.")
 
         #need to retrieve frameid from old annotation

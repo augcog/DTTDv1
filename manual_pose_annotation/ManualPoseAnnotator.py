@@ -243,6 +243,9 @@ class ManualPoseAnnotator:
         object_ids = list(annotated_poses.keys())
 
         active_obj_idx = 0
+
+        edit_all_objects = False
+
         object_meshes = {}
         objects_visible = True
         show_all_objects = True
@@ -334,6 +337,28 @@ class ManualPoseAnnotator:
             return True
 
         vis.register_key_callback(ord("4"), partial(toggle_scene_representation))
+
+#------------------------------------------------------------------------------------------
+        def set_edit_only_one_obj(vis):
+            nonlocal edit_all_objects
+            edit_all_objects = False
+
+            print("Editing only one object!")
+
+            return False
+
+        vis.register_key_callback(ord("G"), partial(set_edit_only_one_obj))
+
+#------------------------------------------------------------------------------------------
+        def set_edit_all_obj(vis):
+            nonlocal edit_all_objects
+            edit_all_objects = True
+
+            print("Editing all objects!")
+
+            return False
+
+        vis.register_key_callback(ord("H"), partial(set_edit_all_obj))
 
 #------------------------------------------------------------------------------------------
         def increase_frameid(vis):
@@ -441,6 +466,22 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("7"), partial(return_to_start_frame))
 
 #------------------------------------------------------------------------------------------
+
+        def icp_all_obj(vis):
+            all_objs_in_sensor_coordinates = []
+
+            for idx, (obj_id, obj_mesh) in enumerate(object_meshes.items()):
+                obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
+                all_objs_in_sensor_coordinates.append(obj_in_sensor_coordinates)
+
+            refinement = ScenePoseRefiner().refine_pose_icp(all_objs_in_sensor_coordinates, camera_representations[0])
+
+            for idx, (obj_id, obj_mesh) in enumerate(object_meshes.items()):
+                object_meshes[obj_id] = object_meshes[obj_id].transform(refinement)
+                vis.update_geometry(object_meshes[obj_id])
+
+            return True
+
         def icp_current_obj(vis):
 
             nonlocal annotated_poses
@@ -464,25 +505,34 @@ class ManualPoseAnnotator:
 
             return True
 
-        vis.register_key_callback(ord(" "), partial(icp_current_obj))
+        def icp_objects(vis):
+            if edit_all_objects:
+                return icp_all_obj(vis)
+            else:
+                return icp_current_obj(vis)
+
+        vis.register_key_callback(ord(" "), partial(icp_objects))
 
 #------------------------------------------------------------------------------------------
 
         colors = [(80, 225, 116), (74, 118, 56), (194, 193, 120), (176, 216, 249), (214, 251, 255)]
 
-        def render_current_view(refine, vis):
+        def render_current_view(refine, show_all, vis):
 
             all_objs_in_sensor_coordinates = []
 
-            for idx, (obj_id, obj_mesh) in enumerate(object_meshes.items()):
-                obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
+            if show_all:
+                for idx, (obj_id, obj_mesh) in enumerate(object_meshes.items()):
+                    obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
+                    all_objs_in_sensor_coordinates.append(obj_in_sensor_coordinates)
+            else:
+                obj_in_sensor_coordinates = object_meshes[object_ids[active_obj_idx]].sample_points_uniformly(number_of_points=10000)
                 all_objs_in_sensor_coordinates.append(obj_in_sensor_coordinates)
 
             if refine:
                 #perform camera pose refinement to simulate final result
 
-                scene_pose_refiner = ScenePoseRefiner()
-                refinement = scene_pose_refiner.refine_pose_icp(all_objs_in_sensor_coordinates, camera_representations[0])    
+                refinement = ScenePoseRefiner().refine_pose_icp(all_objs_in_sensor_coordinates, camera_representations[0])    
 
                 print("camera refinement: ", refinement)
 
@@ -509,103 +559,106 @@ class ManualPoseAnnotator:
             return False
 
 
-        vis.register_key_callback(ord("Z"), partial(render_current_view, False))
+        vis.register_key_callback(ord("Z"), partial(render_current_view, False, True))
 
-        vis.register_key_callback(ord("X"), partial(render_current_view, True))
+        vis.register_key_callback(ord("X"), partial(render_current_view, True, True))
+
+        vis.register_key_callback(ord("C"), partial(render_current_view, False, False))
 
 #------------------------------------------------------------------------------------------
 
-        def align_to_ground_plane(vis):
+        # TODO: Fix this
+        # def align_to_ground_plane(vis):
 
-            camera_pcld = camera_representations[0]
+        #     camera_pcld = camera_representations[0]
 
-            obj_id = object_ids[active_obj_idx]
-            obj_pcld = object_meshes[obj_id].sample_points_uniformly(number_of_points=10000)
+        #     obj_id = object_ids[active_obj_idx]
+        #     obj_pcld = object_meshes[obj_id].sample_points_uniformly(number_of_points=10000)
 
-            obj_pts = np.copy(np.array(obj_pcld.points))
+        #     obj_pts = np.copy(np.array(obj_pcld.points))
 
-            while True:
-                plane_model, inliers = camera_pcld.segment_plane(distance_threshold=0.007,
-                                                    ransac_n=3,
-                                                    num_iterations=1000)
+        #     while True:
+        #         plane_model, inliers = camera_pcld.segment_plane(distance_threshold=0.007,
+        #                                             ransac_n=3,
+        #                                             num_iterations=1000)
 
-                [a, b, c, d] = plane_model
+        #         [a, b, c, d] = plane_model
 
-                #ensure plane normal is pointing up (assume gravity is downwards (positive Y))
-                if np.array([a, b, c]) @ np.array([0, -1, 0]) < 0:
+        #         #ensure plane normal is pointing up (assume gravity is downwards (positive Y))
+        #         if np.array([a, b, c]) @ np.array([0, -1, 0]) < 0:
 
-                    print("flipping normal")
+        #             print("flipping normal")
 
-                    a = -a
-                    b = -b
-                    c = -c
-                    d = -d
+        #             a = -a
+        #             b = -b
+        #             c = -c
+        #             d = -d
 
-                plane_normal = np.array([a, b, c])
+        #         plane_normal = np.array([a, b, c])
 
-                closest_pt = np.min(np.abs(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d))
+        #         closest_pt = np.min(np.abs(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d))
 
-                #might detect a plane outside of the table
-                if closest_pt > 0.05:
-                    camera_pcld = camera_pcld.select_by_index(inliers, inverse=True)
-                else:
-                    break
+        #         #might detect a plane outside of the table
+        #         if closest_pt > 0.05:
+        #             camera_pcld = camera_pcld.select_by_index(inliers, inverse=True)
+        #         else:
+        #             break
 
             
-            most_underground = np.min(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d)
-            upwards_delta = np.array([a, b, c]) * min(most_underground, 0) * -1
+        #     most_underground = np.min(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d)
+        #     upwards_delta = np.array([a, b, c]) * min(most_underground, 0) * -1
 
-            print("moving upwards", upwards_delta)
+        #     print("moving upwards", upwards_delta)
 
-            obj_pts += upwards_delta
+        #     obj_pts += upwards_delta
 
-            obj_pts_touching_ground_mask = np.abs(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d) < 0.001
+        #     obj_pts_touching_ground_mask = np.abs(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d) < 0.001
 
-            obj_pts_touching_ground = obj_pts[obj_pts_touching_ground_mask]
+        #     obj_pts_touching_ground = obj_pts[obj_pts_touching_ground_mask]
 
-            num_pts = obj_pts_touching_ground.shape[0]
+        #     num_pts = obj_pts_touching_ground.shape[0]
 
-            dists = cdist(obj_pts_touching_ground, obj_pts_touching_ground)
-            dists = dists.flatten()
+        #     dists = cdist(obj_pts_touching_ground, obj_pts_touching_ground)
+        #     dists = dists.flatten()
 
-            furthest_pts = np.argmax(dists)
+        #     furthest_pts = np.argmax(dists)
 
-            furthest_pt_1 = int(furthest_pts / num_pts)
-            furthest_pt_2 = int(furthest_pts % num_pts)
+        #     furthest_pt_1 = int(furthest_pts / num_pts)
+        #     furthest_pt_2 = int(furthest_pts % num_pts)
 
-            dists = dists.reshape((num_pts, num_pts))
+        #     dists = dists.reshape((num_pts, num_pts))
 
-            pt_1 = obj_pts_touching_ground[furthest_pt_1]
-            pt_2 = obj_pts_touching_ground[furthest_pt_2]
+        #     pt_1 = obj_pts_touching_ground[furthest_pt_1]
+        #     pt_2 = obj_pts_touching_ground[furthest_pt_2]
 
-            furthest_vec = pt_2 - pt_1
-            furthest_vec /= np.linalg.norm(furthest_vec, keepdims=True)
+        #     furthest_vec = pt_2 - pt_1
+        #     furthest_vec /= np.linalg.norm(furthest_vec, keepdims=True)
             
-            projection = furthest_vec - furthest_vec @ plane_normal / np.square(np.linalg.norm(plane_normal)) * plane_normal
+        #     projection = furthest_vec - furthest_vec @ plane_normal / np.square(np.linalg.norm(plane_normal)) * plane_normal
 
-            projection /= np.linalg.norm(projection, keepdims=True)
+        #     projection /= np.linalg.norm(projection, keepdims=True)
 
-            rotation = np.arccos(furthest_vec @ projection)
+        #     rotation = np.arccos(furthest_vec @ projection)
 
-            print("rotating by radians", rotation)
+        #     print("rotating by radians", rotation)
 
-            rot_vec = np.cross(furthest_vec, projection)
-            rot_vec /= np.linalg.norm(projection, keepdims=True)
+        #     rot_vec = np.cross(furthest_vec, projection)
+        #     rot_vec /= np.linalg.norm(projection, keepdims=True)
 
-            rot_mat = R.from_rotvec(rot_vec * rotation).as_matrix()
+        #     rot_mat = R.from_rotvec(rot_vec * rotation).as_matrix()
 
-            affine = np.eye(4)
-            affine[:3,:3] = rot_mat
-            affine[:3,3] = upwards_delta
+        #     affine = np.eye(4)
+        #     affine[:3,:3] = rot_mat
+        #     affine[:3,3] = upwards_delta
 
-            object_meshes[obj_id] = object_meshes[obj_id].transform(affine)
-            annotated_poses[obj_id] = affine @ annotated_poses[obj_id]
+        #     object_meshes[obj_id] = object_meshes[obj_id].transform(affine)
+        #     annotated_poses[obj_id] = affine @ annotated_poses[obj_id]
 
-            vis.update_geometry(object_meshes[obj_id])
+        #     vis.update_geometry(object_meshes[obj_id])
 
-            return True
+        #     return True
 
-        vis.register_key_callback(ord("C"), partial(align_to_ground_plane))
+        # vis.register_key_callback(ord("V"), partial(align_to_ground_plane))
 #------------------------------------------------------------------------------------------
 
         #ROTATION STUFF
@@ -622,18 +675,44 @@ class ManualPoseAnnotator:
             nonlocal annotated_poses
             nonlocal active_obj_idx
 
-            delta_rot_mat = R.from_euler("XYZ", euler).as_matrix()
-            current_rot_mat = annotated_poses[object_ids[active_obj_idx]][:3,:3]
-            object_meshes[object_ids[active_obj_idx]] = object_meshes[object_ids[active_obj_idx]].rotate(current_rot_mat @ delta_rot_mat @ current_rot_mat.T, annotated_poses[object_ids[active_obj_idx]][:3,3])
-            new_annotated_pose = np.copy(annotated_poses[object_ids[active_obj_idx]])
-            new_annotated_pose[:3,:3] = current_rot_mat @ delta_rot_mat
-            annotated_poses[object_ids[active_obj_idx]] = new_annotated_pose
-            vis.update_geometry(object_meshes[object_ids[active_obj_idx]])
+
+            """
+            Editing all objects is synonymous with camera pose refinement, so rotations happen in world coordinates.
+            """
+            if edit_all_objects:
+
+                # Rotating camera has big effect, need to make it smaller (5%)
+                euler *= 0.05
+                delta_rot_mat = R.from_euler("XYZ", euler).as_matrix()
+
+                obj_ids = list(object_meshes.keys())
+                for obj_id in obj_ids:
+                    current_rot_mat = annotated_poses[obj_id][:3,:3]
+                    object_meshes[obj_id] = object_meshes[obj_id].rotate(delta_rot_mat, np.zeros(3))
+                    new_annotated_pose = np.copy(annotated_poses[obj_id])
+                    new_annotated_pose[:3,:3] = delta_rot_mat @ current_rot_mat
+                    annotated_poses[obj_id] = new_annotated_pose
+                    vis.update_geometry(object_meshes[obj_id])
+            else:
+
+                delta_rot_mat = R.from_euler("XYZ", euler).as_matrix()
+
+                obj_id = object_ids[active_obj_idx]
+                current_rot_mat = annotated_poses[obj_id][:3,:3]
+                object_meshes[obj_id] = object_meshes[obj_id].rotate(current_rot_mat @ delta_rot_mat @ current_rot_mat.T, annotated_poses[object_ids[active_obj_idx]][:3,3])
+                new_annotated_pose = np.copy(annotated_poses[obj_id])
+                new_annotated_pose[:3,:3] = current_rot_mat @ delta_rot_mat
+                annotated_poses[obj_id] = new_annotated_pose
+                vis.update_geometry(object_meshes[obj_id])
 
         def update_rotation_delta(rot_type):
             nonlocal rotation_velocity
             nonlocal rotation_delta
             nonlocal last_rot_type
+            nonlocal last_translation_type
+
+            last_translation_type = ""
+
             if last_rot_type == rot_type:
                 rotation_velocity = min(rotation_velocity + rotation_velocity_delta, 1)
             else:
@@ -706,20 +785,39 @@ class ManualPoseAnnotator:
             nonlocal annotated_poses
             nonlocal active_obj_idx
 
-            current_rot_mat = annotated_poses[object_ids[active_obj_idx]][:3,:3]
-            world_trans = current_rot_mat @ trans
+            """
+            Editing all objects is synonymous with camera pose refinement, meaning translations happen in world coordinates.
+            """
+            if edit_all_objects:
+                obj_ids = list(object_meshes.keys())
+                for obj_id in obj_ids:
+                    world_trans = trans
+                    object_meshes[obj_id] = object_meshes[obj_id].translate(world_trans)
+                    
+                    new_annotated_pose = np.copy(annotated_poses[obj_id])
+                    new_annotated_pose[:3,3] += world_trans
+                    annotated_poses[obj_id] = new_annotated_pose
+                    vis.update_geometry(object_meshes[obj_id])
+            else:
+                obj_id = object_ids[active_obj_idx]
+                current_rot_mat = annotated_poses[obj_id][:3,:3]
+                world_trans = current_rot_mat @ trans
 
-            object_meshes[object_ids[active_obj_idx]] = object_meshes[object_ids[active_obj_idx]].translate(world_trans)
-            
-            new_annotated_pose = np.copy(annotated_poses[object_ids[active_obj_idx]])
-            new_annotated_pose[:3,3] += world_trans
-            annotated_poses[object_ids[active_obj_idx]] = new_annotated_pose
-            vis.update_geometry(object_meshes[object_ids[active_obj_idx]])
+                object_meshes[obj_id] = object_meshes[obj_id].translate(world_trans)
+                
+                new_annotated_pose = np.copy(annotated_poses[obj_id])
+                new_annotated_pose[:3,3] += world_trans
+                annotated_poses[obj_id] = new_annotated_pose
+                vis.update_geometry(object_meshes[obj_id])
 
         def update_translation_delta(translation_type):
             nonlocal translation_velocity
             nonlocal translation_delta
             nonlocal last_translation_type
+            nonlocal last_rot_type
+
+            last_rot_type = ""
+
             if last_translation_type == translation_type:
                 translation_velocity = min(translation_velocity + translation_velocity_delta, 1)
             else:

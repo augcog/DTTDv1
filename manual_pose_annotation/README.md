@@ -24,5 +24,7 @@ Controls:
  * SPC: Small ICP on current object
  * Z: Render current view without ICP (2D)
  * X: Render current view with ICP (2D)
- * C: Align current object to ground plane (experimental)
+ * C: Render current view and current object only without ICP (2D)
+ * G: Edit only one object at a time
+ * H: Edit all objects at the same time
  
