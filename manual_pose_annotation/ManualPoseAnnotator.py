@@ -226,6 +226,7 @@ class ManualPoseAnnotator:
 
         camera_representation_switch = 0
         camera_representations = [camera_pcld, camera_recon]
+        show_camera_representation = True
             
         vis = o3d.visualization.VisualizerWithKeyCallback()
         vis.create_window()
@@ -260,6 +261,8 @@ class ManualPoseAnnotator:
             
             vis.add_geometry(obj_mesh)
 
+        cv2.namedWindow("current frame")
+        cv2.imshow("current frame", load_bgr(frames_dir, curr_frameid, "jpg"))
 
         #SETUP KEY CALLBACKS
 #------------------------------------------------------------------------------------------
@@ -339,6 +342,22 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("4"), partial(toggle_scene_representation))
 
 #------------------------------------------------------------------------------------------
+        def toggle_show_camera_representation(vis):
+
+            nonlocal show_camera_representation
+
+            if show_camera_representation:
+                vis.remove_geometry(camera_representations[camera_representation_switch], reset_bounding_box=False)
+            else:
+                vis.add_geometry(camera_representations[camera_representation_switch], reset_bounding_box=False)
+
+            show_camera_representation = not show_camera_representation
+
+            return True
+
+        vis.register_key_callback(ord("B"), partial(toggle_show_camera_representation))
+
+#------------------------------------------------------------------------------------------
         def set_edit_only_one_obj(vis):
             nonlocal edit_all_objects
             edit_all_objects = False
@@ -391,6 +410,8 @@ class ManualPoseAnnotator:
 
             curr_frameid = new_frameid
 
+            cv2.imshow("current frame", load_bgr(frames_dir, curr_frameid, "jpg"))
+
             return True
 
         vis.register_key_callback(ord("6"), partial(increase_frameid))
@@ -426,6 +447,8 @@ class ManualPoseAnnotator:
 
             curr_frameid = new_frameid
 
+            cv2.imshow("current frame", load_bgr(frames_dir, curr_frameid, "jpg"))
+
             return True
 
         vis.register_key_callback(ord("5"), partial(decrease_frameid))
@@ -460,6 +483,8 @@ class ManualPoseAnnotator:
                 annotated_poses[obj_id] = old_to_new @ annotated_poses[obj_id]
 
             curr_frameid = new_frameid
+
+            cv2.imshow("current frame", load_bgr(frames_dir, curr_frameid, "jpg"))
 
             return True
 

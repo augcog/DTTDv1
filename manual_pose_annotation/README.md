@@ -27,4 +27,5 @@ Controls:
  * C: Render current view and current object only without ICP (2D)
  * G: Edit only one object at a time
  * H: Edit all objects at the same time
+ * B: Toggle camera representation rendering
  
