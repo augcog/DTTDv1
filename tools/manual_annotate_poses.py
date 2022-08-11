@@ -6,6 +6,7 @@ The output will be the object poses in the coordinate system of the camera senso
 
 import argparse
 from functools import partial
+import numpy as np
 import yaml
 
 import os, sys 
@@ -14,6 +15,8 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 from data_processing import CameraPoseSynchronizer
 from manual_pose_annotation import ManualPoseAnnotator
+from utils.affine_utils import invert_affine
+from utils.camera_utils import load_extrinsics
 from utils.constants import SCENES_DIR
 from utils.object_utils import load_object_meshes
 from utils.pose_dataframe_utils import convert_pose_df_to_dict
@@ -26,6 +29,7 @@ def main():
     parser.add_argument('--use_prev', help='use previous annotation')
     parser.add_argument('--no-use-prev', dest='use_prev', action='store_false')
     parser.add_argument('--refresh-extrinsic', default=False, action="store_true")
+    parser.add_argument('--transfer-annotations', type=str, help="transfer annotations from a different scene (should be the same object configuration)")
     parser.set_defaults(use_prev=True)
     args = parser.parse_args()
 
@@ -37,9 +41,8 @@ def main():
     
     objects = load_object_meshes(scene_metadata["objects"])
 
-    cam_pose_sync = CameraPoseSynchronizer()
     synchronized_poses_csv = os.path.join(scene_dir, "camera_poses", "camera_poses_synchronized.csv")
-    synchronized_poses = cam_pose_sync.load_from_file(synchronized_poses_csv)
+    synchronized_poses = CameraPoseSynchronizer().load_from_file(synchronized_poses_csv)
     synchronized_poses = convert_pose_df_to_dict(synchronized_poses)
 
     annotated_object_poses_path = os.path.join(scene_dir, "annotated_object_poses")
@@ -50,7 +53,56 @@ def main():
 
     annotation_file = os.path.join(annotated_object_poses_path, "annotated_object_poses.yaml")
 
-    if args.use_prev and os.path.isfile(annotation_file):
+    """
+    Transfer annotations from a different scene
+    """
+    if args.transfer_annotations:
+        transfer_annotations_poses_path = os.path.join(args.transfer_annotations, "annotated_object_poses", "annotated_object_poses.yaml")
+        with open(transfer_annotations_poses_path, "r") as file:
+            transfer_annotations_data = yaml.safe_load(file)
+        transfer_annotations_frame = transfer_annotations_data["frame"]
+
+        # object -> sensor annot
+        transfer_annotations_poses = transfer_annotations_data["object_poses"]
+        transfer_annotations_poses = {k: np.array(v) for k, v in transfer_annotations_poses.items()}
+        transfer_annotations_scene_meta_path = os.path.join(args.transfer_annotations, "scene_meta.yaml")
+        with open(transfer_annotations_scene_meta_path, "r") as file:
+            transfer_annotations_scene_meta = yaml.safe_load(file)
+        transfer_annotations_camera_name = transfer_annotations_scene_meta["camera"]
+
+        # virtual -> sensor annot
+        transfer_annotations_extrinsic = load_extrinsics(transfer_annotations_camera_name, scene_dir=args.transfer_annotations, use_archive=True)
+
+        transfer_annotations_synchronized_poses_path = os.path.join(args.transfer_annotations, "camera_poses", "camera_poses_synchronized.csv")
+        transfer_annotations_synchronized_poses = CameraPoseSynchronizer().load_from_file(transfer_annotations_synchronized_poses_path)
+        transfer_annotations_synchronized_poses = convert_pose_df_to_dict(transfer_annotations_synchronized_poses)
+
+        # virtual -> opti
+        transfer_annotations_synchronized_pose_annotated_frame = transfer_annotations_synchronized_poses[transfer_annotations_frame]
+
+        # our virtual -> opti
+        our_pose = synchronized_poses[args.frame]
+
+        our_camera = scene_metadata["camera"]
+
+        # our virtual -> our sensor
+        our_extrinsic = load_extrinsics(our_camera, scene_dir, use_archive=True)
+
+        transferred_annotation_poses = {}
+
+        for obj_id, pose in transfer_annotations_poses.items():
+            object_to_virtual = invert_affine(transfer_annotations_extrinsic) @ pose
+            object_to_opti = transfer_annotations_synchronized_pose_annotated_frame @ object_to_virtual
+            object_to_our_virtual = invert_affine(our_pose) @ object_to_opti
+            object_to_our_sensor = our_extrinsic @ object_to_our_virtual
+            transferred_annotation_poses[obj_id] = object_to_our_sensor
+
+        def our_init(*args, **kwargs):
+            return transferred_annotation_poses
+
+        initializer = our_init
+
+    elif args.use_prev and os.path.isfile(annotation_file):
         print("Using previous annotation.")
 
         #need to retrieve frameid from old annotation
