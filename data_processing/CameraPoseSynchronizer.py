@@ -82,6 +82,9 @@ class CameraPoseSynchronizer():
         depth_valid_percentage = np.array(camera_df['Frame'].apply(valid_per))
         depth_mask = filter_depths_valid_percentage(depth_valid_percentage)
 
+        print("Before depth filter: {0} images".format(len(camera_df)))
+        print("After depth filter: {0} images".format(np.count_nonzero(depth_mask)))
+
         camera_df = camera_df[depth_mask]
 
         camera_calib_df = camera_df.copy()
@@ -127,6 +130,8 @@ class CameraPoseSynchronizer():
 
         camera_calib_df = camera_calib_df[camera_calib_df["position_z"].apply(lambda x : x != 0)]
 
+        print("After ARUCO filter: {0} images".format(len(camera_calib_df)))
+
         camera_calib_df['2d_distance'] = np.sqrt(camera_calib_df['position_x'] ** 2 + camera_calib_df['position_z'] ** 2)
 
         lower = camera_calib_df['2d_distance'].quantile(.05)
@@ -143,7 +148,7 @@ class CameraPoseSynchronizer():
         op_calib_df = op_calib_df.astype(np.float64)
 
         op_calib_df['2d_distance'] = np.sqrt(op_calib_df[position_x_key] ** 2 + op_calib_df[position_z_key] ** 2)
-
+        
         camera_pos = np.array(camera_calib_df['2d_distance']).astype(np.float32)
         camera_pos_zero_meaned = camera_pos - np.mean(camera_pos)
         camera_times = np.array(camera_calib_df['time_delta']).astype(np.float32)
