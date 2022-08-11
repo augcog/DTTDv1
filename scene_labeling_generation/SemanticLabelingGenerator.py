@@ -131,7 +131,7 @@ class SemanticLabelingGenerator():
                 depth_out[:,:,idx] = depth_buffer.reshape((h, w))
 
         
-            cv2.imshow("test", bgr)
+            cv2.imshow("semantic", bgr)
             cv2.waitKey(5)
 
             depth_argmin = np.expand_dims(np.argmin(depth_out, axis=-1), -1)

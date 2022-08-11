@@ -261,7 +261,8 @@ class ManualPoseAnnotator:
             
             vis.add_geometry(obj_mesh)
 
-        cv2.namedWindow("current frame")
+        cv2.namedWindow("current frame", cv2.WINDOW_NORMAL)
+        cv2.resizeWindow("current frame", 640, 360)
         cv2.imshow("current frame", load_bgr(frames_dir, curr_frameid, "jpg"))
 
         #SETUP KEY CALLBACKS
@@ -591,99 +592,169 @@ class ManualPoseAnnotator:
         vis.register_key_callback(ord("C"), partial(render_current_view, False, False))
 
 #------------------------------------------------------------------------------------------
+        # obj_id, axis id
+        vertical_axis = (-1, -1)
 
-        # TODO: Fix this
-        # def align_to_ground_plane(vis):
+        def align_vertical_axis(vis):
+            nonlocal vertical_axis
 
-        #     camera_pcld = camera_representations[0]
+            object_axes = {}
 
-        #     obj_id = object_ids[active_obj_idx]
-        #     obj_pcld = object_meshes[obj_id].sample_points_uniformly(number_of_points=10000)
+            for idx, (obj_id, obj_pose) in enumerate(annotated_poses.items()):
+                pos_x = np.array([0.1, 0, 0, 1])
+                neg_x = np.array([-0.1, 0, 0, 1])
+                pos_y = np.array([0, 0.1, 0, 1])
+                neg_y = np.array([0, -0.1, 0, 1])
+                pos_z = np.array([0, 0, 0.1, 1])
+                neg_z = np.array([0, 0, -0.1, 1])
 
-        #     obj_pts = np.copy(np.array(obj_pcld.points))
+                pos_x = (obj_pose @ pos_x)[:3]
+                neg_x = (obj_pose @ neg_x)[:3]
+                pos_y = (obj_pose @ pos_y)[:3]
+                neg_y = (obj_pose @ neg_y)[:3]
+                pos_z = (obj_pose @ pos_z)[:3]
+                neg_z = (obj_pose @ neg_z)[:3]
 
-        #     while True:
-        #         plane_model, inliers = camera_pcld.segment_plane(distance_threshold=0.007,
-        #                                             ransac_n=3,
-        #                                             num_iterations=1000)
+                center = obj_pose[:3,3]
 
-        #         [a, b, c, d] = plane_model
+                object_axes[obj_id] = [pos_x, neg_x, pos_y, neg_y, pos_z, neg_z, center]
 
-        #         #ensure plane normal is pointing up (assume gravity is downwards (positive Y))
-        #         if np.array([a, b, c]) @ np.array([0, -1, 0]) < 0:
+            "Vertical Axis Selection"
+            while vertical_axis[0] == -1:
+                rgb = load_rgb(frames_dir, curr_frameid, "jpg")
+                colors = [(80, 225, 116), (74, 118, 56), (194, 193, 120), (176, 216, 249), (214, 251, 255), (100, 15, 215)]
 
-        #             print("flipping normal")
+                obj_coordinate_systems_projected = {}
+                
+                for obj_id, obj_coordinate_system in object_axes.items():
+                    
+                    obj_coordinate_system = [np.expand_dims(x, 0) for x in obj_coordinate_system]
+                    obj_coordinate_system_stacked = np.concatenate(tuple(obj_coordinate_system), 0)
 
-        #             a = -a
-        #             b = -b
-        #             c = -c
-        #             d = -d
+                    #(Nx2)
+                    obj_coordinate_system_projected, _ = cv2.projectPoints(obj_coordinate_system_stacked, np.zeros(3), np.zeros(3), camera_intrinsics_dict[curr_frameid], camera_distortions_dict[curr_frameid])
+                    obj_coordinate_system_projected = np.round(obj_coordinate_system_projected.squeeze(1)).astype(int)
 
-        #         plane_normal = np.array([a, b, c])
+                    obj_coordinate_systems_projected[obj_id] = np.copy(obj_coordinate_system_projected)
 
-        #         closest_pt = np.min(np.abs(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d))
+                    center = obj_coordinate_system_projected[-1]
+                    obj_coordinate_system_projected = obj_coordinate_system_projected[:-1]
 
-        #         #might detect a plane outside of the table
-        #         if closest_pt > 0.05:
-        #             camera_pcld = camera_pcld.select_by_index(inliers, inverse=True)
-        #         else:
-        #             break
+                    for idx, obj_coordinate_endpoint in enumerate(obj_coordinate_system_projected):
+                        rgb = cv2.line(rgb, center, obj_coordinate_endpoint, colors[idx], 5)
 
+                print("Select axis to align to (vertical)")
+                
+                plt.imshow(rgb)
+                x, y = plt.ginput(1)[0]
+                plt.close()
+
+                print("selected point")
+                print(x, y)
+
+                selection = np.array([x, y])
+
+                "Find closest line to click"
+
+                closest_dist = np.inf
+                closest_axis = (-1, -1)
+
+                def get_line_coeffs(pt1, pt2):
+                    x_diff = pt2[0] - pt2[1]
+                    y_diff = pt2[1] - pt1[1]
+
+                    x_coeff = -y_diff
+                    y_coeff = x_diff
+                    c = y_diff * pt1[0] - x_diff * pt1[0]
+
+                    return x_coeff, y_coeff, c
+
+                def point_dist(pt, line_coeffs, endpoint):
+                    d_line = np.abs(line_coeffs[0] * pt[0] + line_coeffs[1] * pt[1] + line_coeffs[2]) / np.sqrt(np.square(line_coeffs[0]) + np.square(line_coeffs[1]))
+                    d_endpoint = np.linalg.norm(endpoint - pt)
+                    return d_line * 10 + d_endpoint
+
+                for obj_id, obj_coordinate_system_projected in obj_coordinate_systems_projected.items():
+                    center = obj_coordinate_system_projected[-1]
+                    obj_coordinate_system_projected = obj_coordinate_system_projected[:-1]
+
+                    for axis_id, obj_coordinate_endpoint in enumerate(obj_coordinate_system_projected):
+                        line_eq = get_line_coeffs(center, obj_coordinate_endpoint)
+                        selection_dist = point_dist(selection, line_eq, obj_coordinate_endpoint)
+
+                        if selection_dist < closest_dist:
+                            closest_dist = selection_dist
+                            closest_axis = (obj_id, axis_id)
+
+                print("Selected axis is object {0} axis {1}".format(closest_axis[0], closest_axis[1]))
+
+                bgr = load_bgr(frames_dir, curr_frameid, "jpg")
+                selected_coordinate_system = obj_coordinate_systems_projected[closest_axis[0]]
+                selected_center = selected_coordinate_system[-1]
+                selected_coordinate_endpoint = selected_coordinate_system[closest_axis[1]]
+                bgr = cv2.line(bgr, selected_center, selected_coordinate_endpoint, colors[idx], 5)
+
+                print("Press (y/n) to confirm selection")
+
+                cv2.imshow("Selected Axis", bgr)
+                while True:
+                    if cv2.waitKey(1) == ord('y'):
+                        vertical_axis = closest_axis
+                        break
+                    elif cv2.waitKey(1) == ord('n'):
+                        break
+
+                cv2.destroyWindow("Selected Axis")
             
-        #     most_underground = np.min(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d)
-        #     upwards_delta = np.array([a, b, c]) * min(most_underground, 0) * -1
+            "Now we align all object axes within a range"
 
-        #     print("moving upwards", upwards_delta)
+            selected_axis_vector = object_axes[vertical_axis[0]][vertical_axis[1]] - object_axes[vertical_axis[0]][-1]
+            axis_angle_threshold = 0.2 #around 10 degrees
 
-        #     obj_pts += upwards_delta
+            def rotation_matrix_from_vectors(vec1, vec2):
+                """ Find the rotation matrix that aligns vec1 to vec2
+                :param vec1: A 3d "source" vector
+                :param vec2: A 3d "destination" vector
+                :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+                """
+                a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
 
-        #     obj_pts_touching_ground_mask = np.abs(a * obj_pts[:,0] + b * obj_pts[:,1] + c * obj_pts[:,2] + d) < 0.001
+                if (np.array_equal(a, b)):
+                    return np.eye(3)
 
-        #     obj_pts_touching_ground = obj_pts[obj_pts_touching_ground_mask]
+                v = np.cross(a, b)
 
-        #     num_pts = obj_pts_touching_ground.shape[0]
+                c = np.dot(a, b)
+                s = np.linalg.norm(v)
+                kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+                rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+                return rotation_matrix
 
-        #     dists = cdist(obj_pts_touching_ground, obj_pts_touching_ground)
-        #     dists = dists.flatten()
+            for obj_id, obj_axes in object_axes.items():
+                if obj_id == vertical_axis[0]:
+                    continue
 
-        #     furthest_pts = np.argmax(dists)
+                obj_center = obj_axes[-1]
+                obj_axes = obj_axes[:-1]
 
-        #     furthest_pt_1 = int(furthest_pts / num_pts)
-        #     furthest_pt_2 = int(furthest_pts % num_pts)
+                for obj_axis in obj_axes:
+                    obj_axis_vector = obj_axis - obj_center
+                    angle = np.arccos(np.dot(selected_axis_vector, obj_axis_vector) / np.linalg.norm(selected_axis_vector) / np.linalg.norm(obj_axis_vector))
+                    if angle < axis_angle_threshold:
+                        alignment_rotation = rotation_matrix_from_vectors(obj_axis_vector, selected_axis_vector)
+                        current_rot_mat = annotated_poses[obj_id][:3,:3]
+                        object_meshes[obj_id] = object_meshes[obj_id].rotate(alignment_rotation, annotated_poses[obj_id][:3,3])
+                        new_annotated_pose = np.copy(annotated_poses[obj_id])
+                        new_annotated_pose[:3,:3] = alignment_rotation @ current_rot_mat
+                        annotated_poses[obj_id] = new_annotated_pose
 
-        #     dists = dists.reshape((num_pts, num_pts))
+                        vis.update_geometry(object_meshes[obj_id])
 
-        #     pt_1 = obj_pts_touching_ground[furthest_pt_1]
-        #     pt_2 = obj_pts_touching_ground[furthest_pt_2]
+                        break
 
-        #     furthest_vec = pt_2 - pt_1
-        #     furthest_vec /= np.linalg.norm(furthest_vec, keepdims=True)
-            
-        #     projection = furthest_vec - furthest_vec @ plane_normal / np.square(np.linalg.norm(plane_normal)) * plane_normal
+            return True
 
-        #     projection /= np.linalg.norm(projection, keepdims=True)
-
-        #     rotation = np.arccos(furthest_vec @ projection)
-
-        #     print("rotating by radians", rotation)
-
-        #     rot_vec = np.cross(furthest_vec, projection)
-        #     rot_vec /= np.linalg.norm(projection, keepdims=True)
-
-        #     rot_mat = R.from_rotvec(rot_vec * rotation).as_matrix()
-
-        #     affine = np.eye(4)
-        #     affine[:3,:3] = rot_mat
-        #     affine[:3,3] = upwards_delta
-
-        #     object_meshes[obj_id] = object_meshes[obj_id].transform(affine)
-        #     annotated_poses[obj_id] = affine @ annotated_poses[obj_id]
-
-        #     vis.update_geometry(object_meshes[obj_id])
-
-        #     return True
-
-        # vis.register_key_callback(ord("V"), partial(align_to_ground_plane))
+        vis.register_key_callback(ord("V"), partial(align_vertical_axis))
 #------------------------------------------------------------------------------------------
 
         #ROTATION STUFF

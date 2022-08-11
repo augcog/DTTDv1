@@ -28,4 +28,5 @@ Controls:
  * G: Edit only one object at a time
  * H: Edit all objects at the same time
  * B: Toggle camera representation rendering
+ * V: Align vertical axis for objects
  
