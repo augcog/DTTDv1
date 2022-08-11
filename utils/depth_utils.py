@@ -41,17 +41,25 @@ def filter_depths_valid_percentage(depth_valid):
     rolling_max = rolling_max[rolling_window_size - 1:]
 
     rolling_max = np.pad(rolling_max, (0, len(depth_valid) - len(rolling_max)), 'edge')
-
+    
     valid_threshold = 0.8 * rolling_max
     definitely_bad = depth_valid < valid_threshold
 
-    diff_threshold = 0.01
+    print("total depth frames", len(depth_valid))
+
+    print("rolling bad count?")
+    print(np.count_nonzero(definitely_bad))
+
+    diff_threshold = 0.025
     depth_valid_diffs = depth_valid[1:] - depth_valid[:-1]
+
     diff_bad = np.abs(depth_valid_diffs) > diff_threshold
+
+    print("diff bad count?")
+    print(np.count_nonzero(diff_bad))
 
     mask_out = np.ones_like(depth_valid).astype(bool)
     mask_out[definitely_bad] = False
     mask_out[1:][diff_bad] = False
 
     return mask_out
-    

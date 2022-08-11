@@ -341,7 +341,6 @@ class IPhoneDataProcessor():
         scene_metadata = {}
         scene_metadata["cam_scale"] = 0.001
         scene_metadata["camera"] = camera_name
-        scene_metadata["objects"] = []
 
         with open(scene_metadata_output, "w") as f:
             yaml.dump(scene_metadata, f)
