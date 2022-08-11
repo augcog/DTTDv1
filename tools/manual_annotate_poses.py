@@ -57,7 +57,10 @@ def main():
     Transfer annotations from a different scene
     """
     if args.transfer_annotations:
-        transfer_annotations_poses_path = os.path.join(args.transfer_annotations, "annotated_object_poses", "annotated_object_poses.yaml")
+
+        transfer_annotation_scene_dir = os.path.join(SCENES_DIR, args.transfer_annotations)
+
+        transfer_annotations_poses_path = os.path.join(transfer_annotation_scene_dir, "annotated_object_poses", "annotated_object_poses.yaml")
         with open(transfer_annotations_poses_path, "r") as file:
             transfer_annotations_data = yaml.safe_load(file)
         transfer_annotations_frame = transfer_annotations_data["frame"]
@@ -65,15 +68,15 @@ def main():
         # object -> sensor annot
         transfer_annotations_poses = transfer_annotations_data["object_poses"]
         transfer_annotations_poses = {k: np.array(v) for k, v in transfer_annotations_poses.items()}
-        transfer_annotations_scene_meta_path = os.path.join(args.transfer_annotations, "scene_meta.yaml")
+        transfer_annotations_scene_meta_path = os.path.join(transfer_annotation_scene_dir, "scene_meta.yaml")
         with open(transfer_annotations_scene_meta_path, "r") as file:
             transfer_annotations_scene_meta = yaml.safe_load(file)
         transfer_annotations_camera_name = transfer_annotations_scene_meta["camera"]
         
         # virtual -> sensor annot
-        transfer_annotations_extrinsic = load_extrinsics(transfer_annotations_camera_name, scene_dir=args.transfer_annotations, use_archive=True)
+        transfer_annotations_extrinsic = load_extrinsics(transfer_annotations_camera_name, scene_dir=transfer_annotation_scene_dir, use_archive=True)
 
-        transfer_annotations_synchronized_poses_path = os.path.join(args.transfer_annotations, "camera_poses", "camera_poses_synchronized.csv")
+        transfer_annotations_synchronized_poses_path = os.path.join(transfer_annotation_scene_dir, "camera_poses", "camera_poses_synchronized.csv")
         transfer_annotations_synchronized_poses = CameraPoseSynchronizer().load_from_file(transfer_annotations_synchronized_poses_path)
         transfer_annotations_synchronized_poses = convert_pose_df_to_dict(transfer_annotations_synchronized_poses)
 
