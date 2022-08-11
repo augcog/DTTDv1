@@ -152,7 +152,7 @@ def calculate_aruco_from_bgr_and_depth(bgr, depth, depth_scale, camera_matrix, c
 
         tvec = center_pt
 
-        return rvec, tvec, corners
+        return (rvec, tvec, corners)
 
     else:
         return None
