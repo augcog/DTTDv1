@@ -730,7 +730,12 @@ class ManualPoseAnnotator:
                 rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
                 return rotation_matrix
 
-            for obj_id, obj_axes in object_axes.items():
+            if edit_all_objects:
+                obj_ids_and_axes = list(object_axes.items())
+            else:
+                obj_ids_and_axes = [(object_ids[active_obj_idx], object_axes[object_ids[active_obj_idx]])]
+
+            for obj_id, obj_axes in obj_ids_and_axes:
                 if obj_id == vertical_axis[0]:
                     continue
 
