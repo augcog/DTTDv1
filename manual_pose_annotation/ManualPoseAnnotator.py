@@ -682,7 +682,12 @@ class ManualPoseAnnotator:
                         line_eq = get_line_coeffs(center, obj_coordinate_endpoint)
                         selection_dist = point_dist(selection, line_eq, obj_coordinate_endpoint)
 
+                        print(obj_id, axis_id, selection_dist)
+
                         if selection_dist < closest_dist:
+
+                            print("closest dist", closest_dist)
+
                             closest_dist = selection_dist
                             closest_axis = (obj_id, axis_id)
 
@@ -974,6 +979,8 @@ class ManualPoseAnnotator:
 
         vis.run()
         vis.destroy_window()
+
+        cv2.destroyWindow("current frame")
 
         #transform poses back to annotation frame
         curr_pose = corrected_synchronized_poses[curr_frameid]
