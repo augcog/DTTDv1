@@ -660,12 +660,12 @@ class ManualPoseAnnotator:
                 closest_axis = (-1, -1)
 
                 def get_line_coeffs(pt1, pt2):
-                    x_diff = pt2[0] - pt2[1]
+                    x_diff = pt2[0] - pt1[0]
                     y_diff = pt2[1] - pt1[1]
 
                     x_coeff = -y_diff
                     y_coeff = x_diff
-                    c = y_diff * pt1[0] - x_diff * pt1[0]
+                    c = y_diff * pt1[0] - x_diff * pt1[1]
 
                     return x_coeff, y_coeff, c
 
@@ -682,12 +682,7 @@ class ManualPoseAnnotator:
                         line_eq = get_line_coeffs(center, obj_coordinate_endpoint)
                         selection_dist = point_dist(selection, line_eq, obj_coordinate_endpoint)
 
-                        print(obj_id, axis_id, selection_dist)
-
                         if selection_dist < closest_dist:
-
-                            print("closest dist", closest_dist)
-
                             closest_dist = selection_dist
                             closest_axis = (obj_id, axis_id)
 
@@ -735,7 +730,12 @@ class ManualPoseAnnotator:
                 rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
                 return rotation_matrix
 
-            for obj_id, obj_axes in object_axes.items():
+            if edit_all_objects:
+                obj_ids_and_axes = list(object_axes.items())
+            else:
+                obj_ids_and_axes = [(object_ids[active_obj_idx], object_axes[object_ids[active_obj_idx]])]
+
+            for obj_id, obj_axes in obj_ids_and_axes:
                 if obj_id == vertical_axis[0]:
                     continue
 
@@ -746,11 +746,15 @@ class ManualPoseAnnotator:
                     obj_axis_vector = obj_axis - obj_center
                     angle = np.arccos(np.dot(selected_axis_vector, obj_axis_vector) / np.linalg.norm(selected_axis_vector) / np.linalg.norm(obj_axis_vector))
                     if angle < axis_angle_threshold:
-                        alignment_rotation = rotation_matrix_from_vectors(obj_axis_vector, selected_axis_vector)
+
+                        obj_axis_vector_obj_frame = annotated_poses[obj_id][:3,:3].T @ obj_axis_vector
+                        selected_axis_vector_obj_frame = annotated_poses[obj_id][:3,:3].T @ selected_axis_vector 
+
+                        alignment_rotation = rotation_matrix_from_vectors(obj_axis_vector_obj_frame, selected_axis_vector_obj_frame)
                         current_rot_mat = annotated_poses[obj_id][:3,:3]
-                        object_meshes[obj_id] = object_meshes[obj_id].rotate(alignment_rotation, annotated_poses[obj_id][:3,3])
+                        object_meshes[obj_id] = object_meshes[obj_id].rotate(current_rot_mat @ alignment_rotation @ current_rot_mat.T, annotated_poses[object_ids[active_obj_idx]][:3,3])
                         new_annotated_pose = np.copy(annotated_poses[obj_id])
-                        new_annotated_pose[:3,:3] = alignment_rotation @ current_rot_mat
+                        new_annotated_pose[:3,:3] = current_rot_mat @ alignment_rotation
                         annotated_poses[obj_id] = new_annotated_pose
 
                         vis.update_geometry(object_meshes[obj_id])
