@@ -69,6 +69,8 @@ class CameraPoseSynchronizer():
 
         #prune bad depth images
 
+        pbar = tqdm(total=len(camera_df), desc="Filtering depth")
+
         def valid_per(frame_id):
 
             frame_id = int(frame_id)
@@ -77,10 +79,14 @@ class CameraPoseSynchronizer():
             total_pts = depth.shape[0] * depth.shape[1]
             valid_per = np.count_nonzero(depth) / total_pts
 
+            pbar.update(1)
+
             return valid_per
 
         depth_valid_percentage = np.array(camera_df['Frame'].apply(valid_per))
         depth_mask = filter_depths_valid_percentage(depth_valid_percentage)
+
+        pbar.close()
 
         print("Before depth filter: {0} images".format(len(camera_df)))
         print("After depth filter: {0} images".format(np.count_nonzero(depth_mask)))
@@ -97,12 +103,15 @@ class CameraPoseSynchronizer():
         dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         parameters =  cv2.aruco.DetectorParameters_create()
 
+        pbar = tqdm(total=len(camera_calib_df), desc="ARUCO detecting")
         def calculate_virtual_to_opti(row):
 
             frame_id = int(row["Frame"])
             
             color_image = load_bgr(raw_frames_dir, frame_id, raw_frames_ext)
             depth = load_depth(raw_frames_dir, frame_id)
+
+            pbar.update(1)
 
             aruco_pose = calculate_aruco_from_bgr_and_depth(color_image, depth, cam_scale, camera_intrinsics_dict[frame_id], camera_distortions_dict[frame_id], dictionary, parameters)
 
@@ -123,6 +132,8 @@ class CameraPoseSynchronizer():
                 return np.zeros(3).astype(np.float64)
                 
         aruco_computed_virtual_to_opti = np.array(camera_calib_df.apply(calculate_virtual_to_opti, axis=1, result_type="expand")).astype(np.float64)
+
+        pbar.close()
 
         camera_calib_df["position_x"] = aruco_computed_virtual_to_opti[:,0]
         camera_calib_df["position_y"] = aruco_computed_virtual_to_opti[:,1]
