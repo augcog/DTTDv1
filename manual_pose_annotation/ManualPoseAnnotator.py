@@ -200,7 +200,7 @@ class ManualPoseAnnotator:
         for frame_id, sensor_to_opti in corrected_synchronized_poses.items():
             poses_in_first_frame_id_coords[frame_id] = first_frame_id_pose_inv @ sensor_to_opti
 
-        #settings for 3d recon
+        "3D Recon Camera Representation"
         max_depth = 5.00
         voxel_size = 0.007
         sdf_trunc = voxel_size * 5
@@ -214,7 +214,8 @@ class ManualPoseAnnotator:
             sdf_trunc=sdf_trunc,
             color_type=o3d.integration.TSDFVolumeColorType.RGB8)
 
-        for frame_id in range(50):
+        for frame_id in range(frameid, frameid + 50):
+            frame_id = frame_id % num_frames
             rgb = load_o3d_rgb(frames_dir, frame_id, "jpg")
             depth = load_o3d_depth(frames_dir, frame_id)
             rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
@@ -490,6 +491,56 @@ class ManualPoseAnnotator:
             return True
 
         vis.register_key_callback(ord("7"), partial(return_to_start_frame))
+
+#------------------------------------------------------------------------------------------
+        def jump_to_frameid(vis):
+
+            nonlocal curr_frameid
+            nonlocal annotated_poses
+            nonlocal camera_representations
+
+            print("Please enter which frameid")
+
+            new_frameid = input()
+
+            try:
+                new_frameid = int(new_frameid)
+            except:
+                print("please enter a valid int")
+                return False
+
+            if new_frameid < 0 or new_frameid >= num_frames:
+                print("please enter a valid frame id")
+                return False
+            
+            rgb = load_rgb(frames_dir, new_frameid, "jpg")
+            depth = load_depth(frames_dir, new_frameid)
+
+            camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[new_frameid], camera_distortions_dict[new_frameid])
+
+            vis.remove_geometry(camera_representations[0], reset_bounding_box=False)
+            camera_representations[0] = camera_pcld
+            vis.add_geometry(camera_representations[0], reset_bounding_box=False)
+
+            old_cam_pose = corrected_synchronized_poses[curr_frameid]
+            new_cam_pose = corrected_synchronized_poses[new_frameid]
+
+            old_to_new = invert_affine(new_cam_pose) @ old_cam_pose
+
+            for obj_id in object_meshes.keys():
+                object_meshes[obj_id] = object_meshes[obj_id].transform(old_to_new)
+                vis.update_geometry(object_meshes[obj_id])
+
+            for obj_id in annotated_poses.keys():
+                annotated_poses[obj_id] = old_to_new @ annotated_poses[obj_id]
+
+            curr_frameid = new_frameid
+
+            cv2.imshow("current frame", load_bgr(frames_dir, curr_frameid, "jpg"))
+
+            return True
+
+        vis.register_key_callback(ord("8"), partial(jump_to_frameid))
 
 #------------------------------------------------------------------------------------------
 

@@ -331,8 +331,6 @@ class ScenePoseRefiner():
 
                 current_pose = new_current_pose
 
-                # clear alt view cache
-                alt_view_cache = {}
 
                 cv2.imshow("rendered frame", render_current_view())
 
@@ -369,36 +367,34 @@ class ScenePoseRefiner():
                 return True
 
     #------------------------------------------------------------------------------------------
-            # TODO: Fix this
-            # def icp_refine_frame():
+            #TODO: Fix this
+            def icp_refine_frame():
 
-            #     nonlocal synchronized_poses_refined
-            #     nonlocal current_refinement
+                nonlocal synchronized_poses_refined
 
-            #     rgb = load_rgb(frames_dir, frame_ids[frame_ids_idx], "jpg")
-            #     depth = load_depth(frames_dir, frame_ids[frame_ids_idx])
+                rgb = load_rgb(frames_dir, frame_ids[frame_ids_idx], "jpg")
+                depth = load_depth(frames_dir, frame_ids[frame_ids_idx])
 
-            #     # First, refine pose
-            #     objects_in_sensor_coords = {}
+                # First, refine pose
+                objects_in_sensor_coords = {}
 
-            #     for idx, (obj_id, (obj_mesh, obj_bb)) in enumerate(object_meshes_and_bbs.items()):
-            #         obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
-            #         objects_in_sensor_coords[obj_id] = obj_in_sensor_coordinates
+                for idx, (obj_id, (obj_mesh, obj_bb)) in enumerate(object_meshes_and_bbs.items()):
+                    obj_in_sensor_coordinates = obj_mesh.sample_points_uniformly(number_of_points=10000)
+                    objects_in_sensor_coords[obj_id] = obj_in_sensor_coordinates
                 
-            #     camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[frame_id], camera_distortions_dict[frame_id])
+                camera_pcld = pointcloud_from_rgb_depth(rgb, depth, cam_scale, camera_intrinsics_dict[frame_id], camera_distortions_dict[frame_id])
 
-            #     #1 -> 2
-            #     pose_refinement_icp = self.refine_pose_icp(list(objects_in_sensor_coords.values()), camera_pcld)
+                #1 -> 2
+                pose_refinement_icp = self.refine_pose_icp(list(objects_in_sensor_coords.values()), camera_pcld)
 
-            #     print(pose_refinement_icp)
+                print(pose_refinement_icp)
 
-            #     #2 -> 1, 1 -> opti = 2 -> opti
-            #     synchronized_poses_refined[frame_ids[frame_ids_idx]] = synchronized_poses_refined[frame_ids[frame_ids_idx]] @ invert_affine(pose_refinement_icp)
-            #     current_refinement = current_refinement @ invert_affine(pose_refinement_icp)
+                #2 -> 1, 1 -> opti = 2 -> opti
+                synchronized_poses_refined[frame_ids[frame_ids_idx]] = synchronized_poses_refined[frame_ids[frame_ids_idx]] @ invert_affine(pose_refinement_icp)
 
-            #     update_objects()
+                update_objects()
 
-            #     return True
+                return True
     #
 
             #ROTATION STUFF
@@ -568,10 +564,12 @@ class ScenePoseRefiner():
                     toggle_vis()
                 elif k == ord('2'):
                     toggle_bb_vis()
-                elif k == ord('3'):   
+                elif k == ord('3'): 
+                    # clear alt view cache
+                    alt_view_cache = {}   
                     render_alt_views()
-                # elif k == ord(' '):
-                #     icp_refine_frame()
+                elif k == ord(' '):
+                    icp_refine_frame()
 
         # change of coordinates for synchronized poses from:
         # (sensor -> opti) back to (virtual -> opti)

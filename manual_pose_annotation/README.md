@@ -9,6 +9,7 @@ Controls:
  * 5: Decrease Frameid
  * 6: Increase Frameid
  * 7: Return to first frame
+ * 8: Jump to Frameid
  * U: Increase rotation alpha (euler)
  * I: Decrease rotation alpha (euler)
  * O: Increase rotation beta (euler)
