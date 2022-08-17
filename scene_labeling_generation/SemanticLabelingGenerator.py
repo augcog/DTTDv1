@@ -175,6 +175,8 @@ class SemanticLabelingGenerator():
             objects_in_sensor_coords = {}
 
             for idx, (obj_id, obj_pcld) in enumerate(self._objects.items()):
+                if obj_id not in transforms.keys():
+                    continue
                 obj_pcld = o3d.geometry.PointCloud(obj_pcld) #copy constructor
                 obj_pcld = obj_pcld.transform(transforms[obj_id])
                 objects_in_sensor_coords[obj_id] = np.array(obj_pcld.points)
