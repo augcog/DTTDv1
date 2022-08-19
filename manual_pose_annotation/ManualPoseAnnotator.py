@@ -356,7 +356,7 @@ class ManualPoseAnnotator:
 
             return True
 
-        vis.register_key_callback(ord("B"), partial(toggle_show_camera_representation))
+        vis.register_key_callback(ord("N"), partial(toggle_show_camera_representation))
 
 #------------------------------------------------------------------------------------------
         def set_edit_only_one_obj(vis):
@@ -764,6 +764,113 @@ class ManualPoseAnnotator:
             return True
 
         vis.register_key_callback(ord("V"), partial(align_vertical_axis))
+
+        # TODO: Fix this
+        """
+        # a, b, c, d
+        ground_plane_coeffs = np.array([-1, -1, -1, -1])
+
+        def align_ground_plane(vis):
+            nonlocal ground_plane_coeffs
+
+            #ground plane selection
+            while np.all(ground_plane_coeffs == -1):
+                rgb = load_rgb(frames_dir, curr_frameid, "jpg")
+                depth = load_depth(frames_dir, curr_frameid)
+                depth_smoothed = fill_missing(depth, 1 / cam_scale, 1)
+
+                camera_pcld = pointcloud_from_rgb_depth(rgb, depth_smoothed, cam_scale, camera_intrinsics_dict[curr_frameid], camera_distortions_dict[curr_frameid], prune_zero=False)
+
+                print("Select 3 points that define the ground plane")
+
+                plt.imshow(rgb)
+                p1, p2, p3 = plt.ginput(3)
+                plt.close()
+
+                x1, y1 = p1
+                x2, y2 = p2
+                x3, y3 = p3
+
+                idx1 = (np.round(y1) * depth.shape[1] + np.round(x1)).astype(int)
+                idx2 = (np.round(y2) * depth.shape[1] + np.round(x2)).astype(int)
+                idx3 = (np.round(y3) * depth.shape[1] + np.round(x3)).astype(int)
+
+                pts = np.array(camera_pcld.points)
+
+                pt1 = pts[idx1]
+                pt2 = pts[idx2]
+                pt3 = pts[idx3]
+
+                normal_vec = np.cross(pt2 - pt1, pt3 - pt1)
+                normal_vec /= np.linalg.norm(normal_vec)
+
+                d = -np.dot(normal_vec, pt1)
+
+                inlier_threshold = 0.07
+                inlier_mask = np.abs(pts @ normal_vec + d) < inlier_threshold
+
+                inlier_pts = pts[inlier_mask]
+
+                inlier_pcld = o3d.geometry.PointCloud()
+                inlier_pcld.points = o3d.utility.Vector3dVector(inlier_pts)
+                plane_model, plane_inliers = inlier_pcld.segment_plane(distance_threshold=0.01,
+                                         ransac_n=3,
+                                         num_iterations=1000)
+                
+                ground_plane = inlier_pcld.select_by_index(plane_inliers)
+                ground_plane_pts = np.array(ground_plane.points)
+
+                ground_plane_pts_projected, _ = cv2.projectPoints(ground_plane_pts, np.zeros(3), np.zeros(3), camera_intrinsics_dict[curr_frameid], camera_distortions_dict[curr_frameid])
+                ground_plane_pts_projected = np.round(ground_plane_pts_projected.squeeze(1)).astype(int)
+
+                for pt_x, pt_y in ground_plane_pts_projected:
+                    rgb = cv2.circle(rgb, (int(pt_x), int(pt_y)), 1, color=(255, 0, 0), thickness=-1)
+
+                bgr = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
+
+                print("Is this the ground plane? (y/n)")
+
+                cv2.imshow("Ground Plane", bgr)
+
+                while True:
+                    if cv2.waitKey(1) == ord('y'):
+                        ground_plane_coeffs = plane_model
+                        break
+                    elif cv2.waitKey(1) == ord('n'):
+                        break
+
+                cv2.destroyWindow("Ground Plane")
+
+            if ground_plane_coeffs[:3] @ np.array([0, -1, 0]) < 0:
+                ground_plane_coeffs *= -1
+
+            print(ground_plane_coeffs)
+
+            if edit_all_objects:
+                obj_ids = object_ids
+            else:
+                obj_ids = [object_ids[active_obj_idx]]
+
+            for obj_id in obj_ids:
+                obj_mesh = object_meshes[obj_id]
+                obj_pcld = obj_mesh.sample_points_uniformly(number_of_points=10000)
+                obj_pts = np.array(obj_pcld.points)
+
+                print(obj_pts.shape)
+                print(ground_plane_coeffs.shape)
+
+                obj_heights = obj_pts @ ground_plane_coeffs[:3] + ground_plane_coeffs[3]
+
+                floor_percent_threshold = 0.05
+
+
+
+
+
+
+        vis.register_key_callback(ord("B"), partial(align_ground_plane))
+        """
+
 #------------------------------------------------------------------------------------------
 
         #ROTATION STUFF

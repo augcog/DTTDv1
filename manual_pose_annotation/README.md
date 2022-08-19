@@ -27,6 +27,7 @@ Controls:
  * C: Render current view and current object only without ICP (2D)
  * G: Edit only one object at a time
  * H: Edit all objects at the same time
- * B: Toggle camera representation rendering
  * V: Align vertical axis for objects
+ * B: Align ground plane for objects (This doesn't work currently)
+ * N: Toggle camera representation rendering
  
