@@ -20,11 +20,11 @@ import torchvision.transforms as transforms
 import torchvision.utils as vutils
 import torch.nn.functional as F
 from torch.autograd import Variable
-from datasets.ycb.dataset import PoseDataset
+from datasets.ak_ip.dataset import PoseDatasetAllObjects as PoseDataset
 from lib.network import PoseNet, PoseRefineNet
 import cv2
 from lib.randla_utils import randla_processing
-from cfg.config import YCBConfig as Config, load_config
+from cfg.config import AKIPConfig as Config, load_config
 
 from lib.loss import Loss
 from lib.loss_helpers import average_quaternion
@@ -45,7 +45,6 @@ parser.add_argument('--model', type=str, default = '',  help='resume PoseNet mod
 parser.add_argument('--refine_model', type=str, default = '',  help='resume PoseRefineNet model')
 parser.add_argument('--config', type=str, default='', help='load a saved config')
 parser.add_argument('--output', type=str, default='visualization', help='output for point vis')
-parser.add_argument('--use_posecnn_rois', action="store_true", default=False, help="use the posecnn roi's")
 opt = parser.parse_args()
 
 cfg = Config()
@@ -54,14 +53,8 @@ if opt.config:
 
 cfg.refine_start = opt.refine_model != ''
 
-if opt.use_posecnn_rois:
-    from datasets.ycb.dataset import PoseDatasetPoseCNNResults as PoseDataset
-else:
-    from datasets.ycb.dataset import PoseDatasetAllObjects as PoseDataset
-
 batch_size = 1
 workers = 1
-cfg.posecnn_results = "YCB_Video_toolbox/results_PoseCNN_RSS2018"
 
 def get_pointcloud(model_points, t, rot_mat):
 
@@ -71,12 +64,10 @@ def get_pointcloud(model_points, t, rot_mat):
 
     return pts
 
-def project_points(pts, cam_fx, cam_fy, cam_cx, cam_cy):
-    proj_mat = np.array([[cam_fx, 0, cam_cx], [0, cam_fy, cam_cy], [0, 0, 1]])
-    projected_pts = pts @ proj_mat.T
-    projected_pts /= np.expand_dims(projected_pts[:,2], -1)
-    projected_pts = projected_pts[:,:2]
-    return projected_pts
+def project_points(pts, intr, dist):
+    pts_projected, _ = cv2.projectPoints(pts, np.zeros(3), np.zeros(3), intr, dist)
+    pts_projected = np.round(pts_projected.squeeze(1)).astype(int)
+    return pts_projected
 
 def main():
     if not os.path.isdir(opt.output):
@@ -104,9 +95,12 @@ def main():
 
         for now, data_objs in enumerate(test_dataloader):
 
+            if now % 10 != 0:
+                continue
+
             print("frame: {0}".format(now))
 
-            color_img_file = '{0}/{1}-color.png'.format(cfg.root, test_dataset.list[now])
+            color_img_file = os.path.join(test_dataset.data_dir, test_dataset.data_list[now] + "_color.png")
             color_img = cv2.imread(color_img_file)
 
             for obj_idx, end_points in enumerate(data_objs):
@@ -114,7 +108,13 @@ def main():
                 torch.cuda.empty_cache()
 
                 intr = end_points["intr"]
+                dist = end_points["dist"]
+
                 del end_points["intr"]
+                del end_points["dist"]
+
+                intr = intr.squeeze(0).detach().cpu().numpy()
+                dist = dist.squeeze(0).detach().cpu().numpy()
 
                 end_points_cuda = {}
                 for k, v in end_points.items():
@@ -124,8 +124,6 @@ def main():
 
                 if cfg.pcld_encoder == "randlanet":
                     end_points = randla_processing(end_points, cfg)
-
-                cam_fx, cam_fy, cam_cx, cam_cy = [x.item() for x in intr]
                                                                         
                 end_points = estimator(end_points)
 
@@ -219,7 +217,7 @@ def main():
                 # pred_pcld.points = o3d.utility.Vector3dVector(pred)
                 # o3d.io.write_point_cloud("pred_pcld_{0}_{1}.ply".format(now, obj_idx), pred_pcld)
 
-                projected_pred = project_points(pred, cam_fx, cam_fy, cam_cx, cam_cy)
+                projected_pred = project_points(pred, intr, dist)
 
                 r, g, b = colors[obj_idx % len(colors)]
 

@@ -218,11 +218,6 @@ def main():
             output_filename_t = '{0}/{1}_{2}_dcloud_t_saliency.png'.format(opt.output, now, o_i)
             cv2.imwrite(output_filename_t, dcloud_out_t)
 
-            output_filename_cropped = '{0}/{1}_{2}_color_cropped.png'.format(opt.output, now, o_i)
-            color_cropped = end_points_test["cropped_image"].cpu().detach().numpy().squeeze()
-            cv2.imwrite(output_filename_cropped, color_cropped)
-
-
             #===========================================================================
 
 if __name__ == "__main__":

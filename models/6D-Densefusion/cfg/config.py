@@ -22,13 +22,13 @@ class Config(yaml.YAMLObject):
 
     def __init__(self):
         self.iteration = 2 #number of refine iterations
-        self.nepoch = 40 #total number of epochs to train
+        self.nepoch = 60 #total number of epochs to train
 
         self.use_normals = True #use normals for pcld features
         self.use_colors = True #use colors for pcld features
 
         self.batch_size = 8
-        self.workers = 8
+        self.workers = 12
 
         self.decay_margin = 0.015
         self.refine_margin = 0.000015 #refine margin should be less than or equal to decay margin (want decay to trigger first)
@@ -55,11 +55,11 @@ class Config(yaml.YAMLObject):
         #one of ["pointnet", "pointnet2", "randlanet"]
         self.pcld_encoder = "pointnet"
 
-        self.resnet = "resnet34"
+        self.resnet = "resnet18"
         self.pretrained_cnn = True
         self.pretrained_model_dir = "pretrained_models/"
 
-        self.use_confidence = False #use confidence regression vs. standard voting
+        self.use_confidence = True #use confidence regression vs. standard voting
 
         self.fill_depth = False #use hole filling algorithm to fill depth in 2D
 
