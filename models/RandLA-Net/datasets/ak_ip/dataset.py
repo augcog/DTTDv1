@@ -18,7 +18,7 @@ from lib.depth_utils import compute_normals, fill_missing
 import cv2
 import torch.nn.functional as F
 import json
-from .data_utils import load_cameras_dir, load_data_list, load_objects_dir, load_scene_metas
+from .data_utils import load_data_list, load_objects_dir, load_scene_metas
 
 def get_random_rotation_around_symmetry_axis(axis, symm_type, num_symm):
     if symm_type == "radial":
@@ -67,7 +67,6 @@ class SegDataset(data.Dataset):
         self.data_dir = os.path.join(cfg.root, "data")
         objects_dir = os.path.join(cfg.root, "objects")
 
-        self.cameras = load_cameras_dir(cameras_dir)
         self.objects = load_objects_dir(objects_dir)
         self.scene_metadatas = load_scene_metas(self.data_dir)
 
@@ -105,9 +104,8 @@ class SegDataset(data.Dataset):
         camera = scene_metadata["camera"]
         objects = scene_metadata["objects"]
 
-        camera_data = self.cameras[camera]
-        camera_intr = camera_data["intrinsic"]
-        camera_dist = camera_data["distortion"]
+        camera_intr = np.array(meta["intrinsic"])
+        camera_dist = np.array(meta["distortion"])
 
         valid_depth_mask = depth > 0
 
