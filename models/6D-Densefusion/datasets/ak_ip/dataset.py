@@ -63,7 +63,6 @@ class PoseDataset(data.Dataset):
 
         self.cfg = cfg
 
-        cameras_dir = os.path.join(cfg.root, "cameras")
         self.data_dir = os.path.join(cfg.root, "data")
         objects_dir = os.path.join(cfg.root, "objects")
 
@@ -108,7 +107,7 @@ class PoseDataset(data.Dataset):
         if self.add_noise and self.cfg.add_front_aug:
             for k in range(5):
                 seed = random.choice(self.syn)
-                front = np.array(self.trancolor(Image.open('{0}/{1}-color.png'.format(self.cfg.root, seed)).convert("RGB")))
+                front = np.array(self.trancolor(Image.open('{0}/{1}-color.jpg'.format(self.cfg.root, seed)).convert("RGB")))
                 front = np.transpose(front, (2, 0, 1))
                 f_label = np.array(Image.open('{0}/{1}-label.png'.format(self.cfg.root, seed)))
                 front_label = np.unique(f_label).tolist()[1:]
@@ -263,7 +262,7 @@ class PoseDataset(data.Dataset):
         item_abs = os.path.join(self.data_dir, item)
         scene_name = item[:item.find("/")]
 
-        img = Image.open(item_abs + "_color.png")
+        img = Image.open(item_abs + "_color.jpg")
         depth = np.array(Image.open(item_abs + "_depth.png"))
         label = np.array(Image.open(item_abs + "_label.png"))
         meta_file = item_abs + "_meta.json"
@@ -273,12 +272,9 @@ class PoseDataset(data.Dataset):
         scene_metadata = self.scene_metadatas[scene_name]
 
         cam_scale = scene_metadata["cam_scale"]
-        camera = scene_metadata["camera"]
-        objects = scene_metadata["objects"]
 
-        camera_data = self.cameras[camera]
-        camera_intr = camera_data["intrinsic"]
-        camera_dist = camera_data["distortion"]
+        camera_intr = np.array(meta["intrinsic"])
+        camera_dist = np.array(meta["distortion"])
 
         obj = np.array(meta['objects']).flatten().astype(np.int32)
         idxs = [i for i in range(len(obj))]
@@ -338,7 +334,7 @@ class PoseDatasetAllObjects(PoseDataset):
         item_abs = os.path.join(self.data_dir, item)
         scene_name = item[:item.find("/")]
 
-        img = Image.open(item_abs + "_color.png")
+        img = Image.open(item_abs + "_color.jpg")
         depth = np.array(Image.open(item_abs + "_depth.png"))
         label = np.array(Image.open(item_abs + "_label.png"))
         meta_file = item_abs + "_meta.json"
@@ -348,8 +344,6 @@ class PoseDatasetAllObjects(PoseDataset):
         scene_metadata = self.scene_metadatas[scene_name]
 
         cam_scale = scene_metadata["cam_scale"]
-        camera = scene_metadata["camera"]
-        objects = scene_metadata["objects"]
 
         camera_intr = np.array(meta["intrinsic"])
         camera_dist = np.array(meta["distortion"])

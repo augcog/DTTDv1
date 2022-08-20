@@ -22,7 +22,7 @@ class Config(yaml.YAMLObject):
 
     def __init__(self):
         self.iteration = 2 #number of refine iterations
-        self.nepoch = 60 #total number of epochs to train
+        self.nepoch = 160 #total number of epochs to train
 
         self.use_normals = True #use normals for pcld features
         self.use_colors = True #use colors for pcld features
@@ -32,7 +32,7 @@ class Config(yaml.YAMLObject):
 
         self.decay_margin = 0.015
         self.refine_margin = 0.000015 #refine margin should be less than or equal to decay margin (want decay to trigger first)
-        self.refine_epoch = 20 #epoch to start refining if refine margin isn't ever reached
+        self.refine_epoch = 100 #epoch to start refining if refine margin isn't ever reached
 
         self.lr = 0.0001
         self.lr_scheduler = "exponential"
@@ -83,9 +83,9 @@ class AKIPConfig(Config):
     def __init__(self):
         super().__init__()
 
-        self.root = "E:/datasets/ours/root"
-        self.num_objects = 12
-        self.num_points = 2048
+        self.root = "E:/adam/6d-pose-dataset-training/6d-pose-dataset/toolbox/root"
+        self.num_objects = 16
+        self.num_points = 1024
         self.outf = 'trained_models/akip'
         self.log_dir = 'experiments/logs/akip'
         self.repeat_epoch = 1

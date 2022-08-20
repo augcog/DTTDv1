@@ -86,7 +86,7 @@ def main():
         refiner.load_state_dict(torch.load(opt.refine_model))
         refiner.eval()
 
-    test_dataset = PoseDataset('test', cfg = cfg)
+    test_dataset = PoseDataset('train', cfg = cfg)
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=workers)
 
     colors = [(96, 60, 20), (156, 39, 6), (212, 91, 18), (243, 188, 46), (95, 84, 38)]
@@ -100,7 +100,7 @@ def main():
 
             print("frame: {0}".format(now))
 
-            color_img_file = os.path.join(test_dataset.data_dir, test_dataset.data_list[now] + "_color.png")
+            color_img_file = os.path.join(test_dataset.data_dir, test_dataset.data_list[now] + "_color.jpg")
             color_img = cv2.imread(color_img_file)
 
             for obj_idx, end_points in enumerate(data_objs):
