@@ -91,7 +91,7 @@ class SyntheticDataGenerator:
         behind_camera_pose[2,3] = -2.
 
         # compose scene
-        scene_color = pyrender.Scene(ambient_light=[.4, .4, .4], bg_color=[1., 1., 1.])
+        scene_color = pyrender.Scene(ambient_light=[.4, .4, .4], bg_color=[0., 0., 0.])
         scene_label = pyrender.Scene(ambient_light=[1., 1., 1.], bg_color=[0., 0., 0.])
         camera = pyrender.IntrinsicsCamera(fx = cam_intrinsic[0,0], fy=cam_intrinsic[1,1], cx=cam_intrinsic[0,2], cy=cam_intrinsic[1,2])
 
@@ -298,6 +298,8 @@ class SyntheticDataGenerator:
             render_flags = pyrender.RenderFlags.SEG
 
             label, _ = r.render(scene_label, render_flags, label_node_map)
+
+            label = label[:,:,0].astype(np.uint16)
 
             objects_in_image = sorted(np.unique(label).tolist())
 
