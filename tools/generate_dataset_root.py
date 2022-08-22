@@ -13,7 +13,7 @@ sys.path.append(os.path.join(dir_path, ".."))
 
 ROOT_TRAIN_DATA_LIST_FILE = "train_data_list.txt"
 ROOT_TEST_DATA_LIST_FILE = "test_data_list.txt"
-SKIP_FRAMES_NUM = 1 # Number of frames skipped between each frame selected
+SKIP_FRAMES_NUM = 0 # Number of frames skipped between each frame selected
 TRAIN_TEST_SPLIT_PERCENTAGE = 0.9
 
 def main():
@@ -59,14 +59,16 @@ def main():
     with open(os.path.join(args.output, ROOT_TRAIN_DATA_LIST_FILE), 'w') as f:
         for each_scene_path in train_folder_path_list:
             data_dir = os.path.join(each_scene_path, "data")
-            ids = [str(x).zfill(5) for x in list(range(0, len(os.listdir(data_dir)), SKIP_FRAMES_NUM))]
+            ids = [x[:x.find("_")] for x in list(os.listdir(data_dir)) if "meta.json" in x]
+            ids = ids[::SKIP_FRAMES_NUM + 1]
             file_names = [(str(os.path.basename(os.path.normpath(each_scene_path))) + "/data/" + each_id +'\n') for each_id in ids]
             f.writelines(file_names)
 
     with open(os.path.join(args.output, ROOT_TEST_DATA_LIST_FILE), "w") as f:
         for each_scene_path in test_folder_path_list:
             data_dir = os.path.join(each_scene_path, "data")
-            ids = [str(x).zfill(5) for x in list(range(0, len(os.listdir(data_dir)), SKIP_FRAMES_NUM))]
+            ids = [x[:x.find("_")] for x in list(os.listdir(data_dir)) if "meta.json" in x]
+            ids = ids[::SKIP_FRAMES_NUM + 1]
             file_names = [(str(os.path.basename(os.path.normpath(each_scene_path))) + "/data/" + each_id + "\n") for each_id in ids]
             f.writelines(file_names) 
 
