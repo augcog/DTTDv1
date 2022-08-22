@@ -16,7 +16,7 @@ from utils.constants import AZURE_KINECT_COLOR_HEIGHT, AZURE_KINECT_COLOR_WIDTH
 from utils.frame_utils import load_bgr, load_label, load_meta
 
 class AnnotationReviewer():
-    def __init__(self, trimesh_objects={}, number_of_points=10000):
+    def __init__(self, trimesh_objects={}):
         self._objects = {}
         for obj_id, obj_data in trimesh_objects.items():
             self._objects[obj_id] = obj_data["mesh"].copy()
@@ -38,7 +38,7 @@ class AnnotationReviewer():
         obj_nodes = {}
 
         # compose scene
-        scene = pyrender.Scene(ambient_light=[.1, .1, .3], bg_color=[0, 0, 0])
+        scene = pyrender.Scene(ambient_light=[.1, .1, .3], bg_color=[0., 0., 0.])
         camera = pyrender.PerspectiveCamera( yfov=np.pi / 3.0)
         light = pyrender.DirectionalLight(color=[1,1,1], intensity=2e3)
 
