@@ -8,8 +8,6 @@ import shutil
 import numpy as np
 
 import os, sys
-
-from sklearn.model_selection import train_test_split 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
@@ -61,16 +59,14 @@ def main():
     with open(os.path.join(args.output, ROOT_TRAIN_DATA_LIST_FILE), 'w') as f:
         for each_scene_path in train_folder_path_list:
             data_dir = os.path.join(each_scene_path, "data")
-            upper_limits = len(os.listdir(data_dir)) // 5
-            ids = [str(x).zfill(5) for x in list(range(0, upper_limits, SKIP_FRAMES_NUM))]
+            ids = [str(x).zfill(5) for x in list(range(0, len(os.listdir(data_dir)), SKIP_FRAMES_NUM))]
             file_names = [(str(os.path.basename(os.path.normpath(each_scene_path))) + "/data/" + each_id +'\n') for each_id in ids]
             f.writelines(file_names)
 
     with open(os.path.join(args.output, ROOT_TEST_DATA_LIST_FILE), "w") as f:
         for each_scene_path in test_folder_path_list:
             data_dir = os.path.join(each_scene_path, "data")
-            upper_limits = len(os.listdir(data_dir)) // 5
-            ids = [str(x).zfill(5) for x in list(range(0, upper_limits, SKIP_FRAMES_NUM))]
+            ids = [str(x).zfill(5) for x in list(range(0, len(os.listdir(data_dir)), SKIP_FRAMES_NUM))]
             file_names = [(str(os.path.basename(os.path.normpath(each_scene_path))) + "/data/" + each_id + "\n") for each_id in ids]
             f.writelines(file_names) 
 
