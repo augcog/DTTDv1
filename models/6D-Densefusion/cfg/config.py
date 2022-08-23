@@ -27,8 +27,8 @@ class Config(yaml.YAMLObject):
         self.use_normals = True #use normals for pcld features
         self.use_colors = True #use colors for pcld features
 
-        self.batch_size = 8
-        self.workers = 12
+        self.batch_size = 4
+        self.workers = 8
 
         self.decay_margin = 0.015
         self.refine_margin = 0.000015 #refine margin should be less than or equal to decay margin (want decay to trigger first)

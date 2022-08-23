@@ -77,6 +77,8 @@ class PoseDataset(data.Dataset):
             self.add_noise = False
 
         self.data_list = load_data_list(data_list_file)
+        self.real_list = [x for x in self.data_list if 'synthetic' not in x]
+        self.synthetic_list = [x for x in self.data_list if 'synthetic' in x]
 
         self.length = len(self.data_list)
 
@@ -107,9 +109,9 @@ class PoseDataset(data.Dataset):
         if self.add_noise and self.cfg.add_front_aug:
             for k in range(5):
                 seed = random.choice(self.syn)
-                front = np.array(self.trancolor(Image.open('{0}/{1}-color.jpg'.format(self.cfg.root, seed)).convert("RGB")))
+                front = np.array(self.trancolor(Image.open('{0}/{1}_color.jpg'.format(self.data_dir, seed)).convert("RGB")))
                 front = np.transpose(front, (2, 0, 1))
-                f_label = np.array(Image.open('{0}/{1}-label.png'.format(self.cfg.root, seed)))
+                f_label = np.array(Image.open('{0}/{1}_label.png'.format(self.data_dir, seed)))
                 front_label = np.unique(f_label).tolist()[1:]
                 if len(front_label) < self.front_num:
                    continue
@@ -148,13 +150,24 @@ class PoseDataset(data.Dataset):
         else:
             choose = np.pad(choose, (0, self.cfg.num_points - len(choose)), 'wrap')
 
-        if self.add_noise:
+        # Only change color 30% of the time since we need to distinguish different colored objects
+        if self.add_noise and np.random.rand() < 0.3:
             img = self.trancolor(img)
 
         img = np.array(img)[:, :, :3][rmin:rmax, cmin:cmax,:]
 
         img = np.transpose(img, (2, 0, 1))
-        img_masked = img
+
+        # Add Real back
+        if 'synthetic' in self.data_list[index]:
+            real_id = np.random.choice(self.real_list)
+            back = np.array(self.trancolor(Image.open('{0}/{1}_color.jpg'.format(self.data_dir, real_id)).convert("RGB")))
+            back = np.transpose(back, (2, 0, 1))[:, rmin:rmax, cmin:cmax]
+
+            img[:, mask_back[rmin:rmax, cmin:cmax]] = 0
+            img_masked = back * mask_back[rmin:rmax, cmin:cmax] + img
+        else:
+            img_masked = img
 
         if self.add_noise and add_front:
             img_masked = img_masked * mask_front[rmin:rmax, cmin:cmax] + front[:, rmin:rmax, cmin:cmax] * ~(mask_front[rmin:rmax, cmin:cmax])
@@ -274,7 +287,7 @@ class PoseDataset(data.Dataset):
         cam_scale = scene_metadata["cam_scale"]
 
         camera_intr = np.array(meta["intrinsic"])
-        camera_dist = np.array(meta["distortion"])
+        camera_dist = np.array(meta["distortion"] if meta["distortion"] else [])
 
         obj = np.array(meta['objects']).flatten().astype(np.int32)
         idxs = [i for i in range(len(obj))]
@@ -289,7 +302,7 @@ class PoseDataset(data.Dataset):
                 return end_points
             else:
                 continue
-        print("no valid obj with framae {0}".format(self.list[index]))
+        print("no valid obj with frame {0}".format(self.data_list[index]))
         return {}
 
     def __len__(self):
