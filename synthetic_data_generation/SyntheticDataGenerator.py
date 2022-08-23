@@ -300,6 +300,7 @@ class SyntheticDataGenerator:
             label, _ = r.render(scene_label, render_flags, label_node_map)
 
             label = label[:,:,0].astype(np.uint16)
+            label[~np.isin(label, objects_in_frame)] = 0
 
             objects_in_image = sorted(np.unique(label).tolist())
 
@@ -307,7 +308,7 @@ class SyntheticDataGenerator:
             frame_metadata["objects"] = [x for x in objects_in_image if x != 0]
             frame_metadata["object_poses"] = {int(k): v.tolist() for k, v in obj_poses.items() if k in frame_metadata["objects"]}
             frame_metadata["intrinsic"] = cam_intrinsic.tolist()
-            frame_metadata["distortion"] = None
+            frame_metadata["distortion"] = []
 
             frame_write_thread = threading.Thread(target=SyntheticDataGenerator._write_data, args=(data_dir, frame_id, color, depth, label, frame_metadata))
             frame_write_thread.start()

@@ -16,11 +16,9 @@ Final dataset output:
 
 # How to run
  1. Setup
-	 1. Place ARUCO marker near origin (doesn't actually matter where it is anymore, but makes sense to be near opti origin)
+	 1. Place ARUCO marker near origin (doesn't actually matter where it is anymore, but makes sense to be near OptiTrack origin)
 	 2. Calibrate Opti (if you want, don't need to do this everytime, or else extrinsic changes)
-	 3. Place a single marker in the center of the aruco marker, use this to compute the aruco -> opti transform
-		 * Place the marker position into `calculate_extrinsic/aruco_marker.txt`
-	 4. Place markers on the corners of the aruco marker, use this to compute the aruco -> opti transform as well
+	 3. Place markers on the corners of the aruco marker, use this to compute the aruco -> opti transform
 	 	 * Place marker positions into `calculate_extrinsic/aruco_corners.yaml`
  2. Record Data (`tools/capture_data.py`)
      1. ARUCO Calibration
@@ -31,11 +29,15 @@ Final dataset output:
  3. Check if the Extrinsic file exists
 	 1. If Extrinsic file doesn't exist, then you need to calculate Extrinsic through Step 4
 	 2. Otherwise, process data through Step 5 to generate groundtruth labels
- 4. Process Extrinsic Data to Calculate Extrinsic (If extrinsic scene)
+ 4. Process iPhone Data (if iPhone Data)
+	1. Convert iPhone data formats to Kinect data formats (`tools/process_iphone_data.py`)
+		* This tool converts everything to common image names, formats, and does distortion parameter fitting
+	2. Continue with step 5 or 6 depending on whether computing an extrinsic or capturing scene data
+ 5. Process Extrinsic Data to Calculate Extrinsic (If extrinsic scene)
 	 1. Clean raw opti poses (`tools/process_data.py`) 
 	 2. Sync opti poses with frames (`tools/process_data.py`)
 	 3. Calculate camera extrinsic (`tools/calculate_camera_extrinsic.py`)
- 5. Process Data (If real scene)
+ 6. Process Data (If data scene)
 	 1. Clean raw opti poses (`tools/process_data.py`) <br>
 	 Example: <code>python tools/process_data.py --scene_name [SCENE_NAME]</code>
 	 2. Sync opti poses with frames (`tools/process_data.py`) <br>
