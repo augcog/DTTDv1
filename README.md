@@ -1,40 +1,5 @@
 # DTTD: Digital-Twin Tracking Dataset Official Repository
 
-## Table of Content
-- [DTTD: Digital-Twin Tracking Dataset Official Repository](#dttd-digital-twin-tracking-dataset-official-repository)
-	- [Table of Content](#table-of-content)
-	- [Overview](#overview)
-	- [Requirements](#requirements)
-	- [Code Structure](#code-structure)
-	- [Datasets](#datasets)
-	- [Training](#training)
-	- [Evaluation](#evaluation)
-		- [Evaluation on YCB\_Video Dataset](#evaluation-on-ycb_video-dataset)
-		- [Evaluation on LineMOD Dataset](#evaluation-on-linemod-dataset)
-	- [Results](#results)
-	- [Trained Checkpoints](#trained-checkpoints)
-	- [Tips for your own dataset](#tips-for-your-own-dataset)
-	- [Citations](#citations)
-	- [License](#license)
-- [OUR DATASET REPO](#our-dataset-repo)
-	- [Dataset Structure](#dataset-structure)
-	- [Data Collection Pipeline](#data-collection-pipeline)
-		- [Configuration \& Setup](#configuration--setup)
-		- [Record Data (`tools/capture_data.py`)](#record-data-toolscapture_datapy)
-		- [Check if the Extrinsic file exists](#check-if-the-extrinsic-file-exists)
-		- [Process iPhone Data (if iPhone Data)](#process-iphone-data-if-iphone-data)
-		- [Process Extrinsic Data to Calculate Extrinsic (If extrinsic scene)](#process-extrinsic-data-to-calculate-extrinsic-if-extrinsic-scene)
-		- [Process Data (If data scene)](#process-data-if-data-scene)
-	- [Minutia](#minutia)
-	- [Best Scene Collection Practices](#best-scene-collection-practices)
-- [Todo: Model Evaluation for this dataset](#todo-model-evaluation-for-this-dataset)
-	- [DTTD: Digital-Twin Tracking Dataset](#dttd-digital-twin-tracking-dataset)
-	- [Objects and Scenes data:](#objects-and-scenes-data)
-- [How to run](#how-to-run)
-- [Minutia](#minutia-1)
-- [Best Scene Collection Practices](#best-scene-collection-practices-1)
-- [Todo: Model Evaluation for this dataset](#todo-model-evaluation-for-this-dataset-1)
-
 ## Overview
 
 This repository is the implementation code of the paper "Digital-Twin Tracking Dataset (DTTD): A Time-of-Flight 3D Object Tracking Dataset for High-Quality AR Applications".
