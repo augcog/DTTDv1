@@ -24,7 +24,6 @@ pip install -r requirements.txt
 
 
 ## Dataset Structure
-https://docs.google.com/spreadsheets/d/1weyPvCyxU82EIokMlGhlK5uEbNt9b8a-54ziPpeGjRo/edit?usp=sharing
 
 Final dataset output:
  * `objects` folder
