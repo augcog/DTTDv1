@@ -63,13 +63,13 @@ struct ContentView: View {
                             )
                             .aspectRatio(calcAspect(orientation: viewOrientation, texture: manager.capturedData.depth), contentMode: .fit)
                         }
-//                        ZoomOnTap {
-//                            DepthOverlay(manager: manager,
-//                                         maxDepth: $maxDepth,
-//                                         minDepth: $minDepth
-//                            )
-//                            .aspectRatio(calcAspect(orientation: viewOrientation, texture: manager.capturedData.depth), contentMode: .fit)
-//                        }
+                        ZoomOnTap {
+                            DepthOverlay(manager: manager,
+                                         maxDepth: $maxDepth,
+                                         minDepth: $minDepth
+                            )
+                            .aspectRatio(calcAspect(orientation: viewOrientation, texture: manager.capturedData.depth), contentMode: .fit)
+                        }
                     }
                 }
             }

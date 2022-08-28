@@ -166,7 +166,7 @@ class CameraController: NSObject, ObservableObject {
         
         // Create an object to output depth data.
         depthDataOutput = AVCaptureDepthDataOutput()
-        depthDataOutput.isFilteringEnabled = isFilteringEnabled
+        depthDataOutput.isFilteringEnabled = false
         captureSession.addOutput(depthDataOutput)
 
         // Create an object to synchronize the delivery of depth and video data.
