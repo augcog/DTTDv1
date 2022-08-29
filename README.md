@@ -22,6 +22,27 @@ then install all necessary packages:
 pip install -r requirements.txt
 ```
 
+## Code Structure
+* **calculate_extrinsic**: extrinsic information
+* **cameras**: camera information
+* **data_capturing**: helper package for data capturing
+* **data_processing**: helper package for data processing
+* **demos**: demo videos
+* **doc**: demo images
+* **extrinsics_scenes**: folder to save all extrinsic scenes
+* **iphone_app**: iPhone app development for capturing RGBD images for iPhone 12 Pro camera
+* **manual_pose_annotation**: helper package for pose annotation
+* **models**: baseline deep learning 6D pose estimation algorithms
+* **objects**: object models that we use in DTTD (with corresponding scale and texture)
+* **pose_refinement**: helper package for pose refinement
+* **quality_control**: helper package for reviewing manual annotations
+* **scene_labeling_generation**: helper package for generating labels
+* **scenes**: folder to save all recorded RGBD data
+* **synthetic_data_generation**: helper package for generating synthetic data
+* **testing**: package to test aruco marker's appearance, extrinsic's validity, etc.
+* **toolbox**: package to generate data for model training
+* **tools**: commands for running the pipelines. Details in **tools/README.md**.
+* **utils**: utils package
 
 ## Dataset Structure
 
