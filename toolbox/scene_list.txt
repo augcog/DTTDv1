@@ -1,0 +1,13 @@
+az_new_normal_1
+az_new_normal_2
+az_new_normal_3
+az_new_normal_5
+az_new_night_1
+az_new_night_2
+az_new_night_3
+az_new_night_5
+az_new_occlusion_1
+az_new_occlusion_2
+az_new_occlusion_3
+az_new_occlusion_4
+az_new_occlusion_5

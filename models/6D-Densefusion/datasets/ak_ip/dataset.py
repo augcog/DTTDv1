@@ -18,7 +18,7 @@ from lib.depth_utils import compute_normals, fill_missing
 import cv2
 import torch.nn.functional as F
 import json
-from .data_utils import load_cameras_dir, load_data_list, load_objects_dir, load_scene_metas
+from .data_utils import load_data_list, load_objects_dir, load_scene_metas
 
 def get_random_rotation_around_symmetry_axis(axis, symm_type, num_symm):
     if symm_type == "radial":
@@ -63,11 +63,9 @@ class PoseDataset(data.Dataset):
 
         self.cfg = cfg
 
-        cameras_dir = os.path.join(cfg.root, "cameras")
         self.data_dir = os.path.join(cfg.root, "data")
         objects_dir = os.path.join(cfg.root, "objects")
 
-        self.cameras = load_cameras_dir(cameras_dir)
         self.objects = load_objects_dir(objects_dir)
         self.scene_metadatas = load_scene_metas(self.data_dir)
 
@@ -79,6 +77,8 @@ class PoseDataset(data.Dataset):
             self.add_noise = False
 
         self.data_list = load_data_list(data_list_file)
+        self.real_list = [x for x in self.data_list if 'synthetic' not in x]
+        self.synthetic_list = [x for x in self.data_list if 'synthetic' in x]
 
         self.length = len(self.data_list)
 
@@ -109,9 +109,9 @@ class PoseDataset(data.Dataset):
         if self.add_noise and self.cfg.add_front_aug:
             for k in range(5):
                 seed = random.choice(self.syn)
-                front = np.array(self.trancolor(Image.open('{0}/{1}-color.png'.format(self.cfg.root, seed)).convert("RGB")))
+                front = np.array(self.trancolor(Image.open('{0}/{1}_color.jpg'.format(self.data_dir, seed)).convert("RGB")))
                 front = np.transpose(front, (2, 0, 1))
-                f_label = np.array(Image.open('{0}/{1}-label.png'.format(self.cfg.root, seed)))
+                f_label = np.array(Image.open('{0}/{1}_label.png'.format(self.data_dir, seed)))
                 front_label = np.unique(f_label).tolist()[1:]
                 if len(front_label) < self.front_num:
                    continue
@@ -150,13 +150,24 @@ class PoseDataset(data.Dataset):
         else:
             choose = np.pad(choose, (0, self.cfg.num_points - len(choose)), 'wrap')
 
-        if self.add_noise:
+        # Only change color 30% of the time since we need to distinguish different colored objects
+        if self.add_noise and np.random.rand() < 0.3:
             img = self.trancolor(img)
 
         img = np.array(img)[:, :, :3][rmin:rmax, cmin:cmax,:]
 
         img = np.transpose(img, (2, 0, 1))
-        img_masked = img
+
+        # Add Real back
+        if 'synthetic' in self.data_list[index]:
+            real_id = np.random.choice(self.real_list)
+            back = np.array(self.trancolor(Image.open('{0}/{1}_color.jpg'.format(self.data_dir, real_id)).convert("RGB")))
+            back = np.transpose(back, (2, 0, 1))[:, rmin:rmax, cmin:cmax]
+
+            img[:, mask_back[rmin:rmax, cmin:cmax]] = 0
+            img_masked = back * mask_back[rmin:rmax, cmin:cmax] + img
+        else:
+            img_masked = img
 
         if self.add_noise and add_front:
             img_masked = img_masked * mask_front[rmin:rmax, cmin:cmax] + front[:, rmin:rmax, cmin:cmax] * ~(mask_front[rmin:rmax, cmin:cmax])
@@ -253,7 +264,8 @@ class PoseDataset(data.Dataset):
         end_points["obj_idx"] = torch.LongTensor([int(obj_idx) - 1])
 
         if return_intr:
-            end_points["intr"] = (cam_intr, cam_dist)
+            end_points["intr"] = cam_intr
+            end_points["dist"] = cam_dist
 
         return end_points
 
@@ -263,7 +275,7 @@ class PoseDataset(data.Dataset):
         item_abs = os.path.join(self.data_dir, item)
         scene_name = item[:item.find("/")]
 
-        img = Image.open(item_abs + "_color.png")
+        img = Image.open(item_abs + "_color.jpg")
         depth = np.array(Image.open(item_abs + "_depth.png"))
         label = np.array(Image.open(item_abs + "_label.png"))
         meta_file = item_abs + "_meta.json"
@@ -273,12 +285,9 @@ class PoseDataset(data.Dataset):
         scene_metadata = self.scene_metadatas[scene_name]
 
         cam_scale = scene_metadata["cam_scale"]
-        camera = scene_metadata["camera"]
-        objects = scene_metadata["objects"]
 
-        camera_data = self.cameras[camera]
-        camera_intr = camera_data["intrinsic"]
-        camera_dist = camera_data["distortion"]
+        camera_intr = np.array(meta["intrinsic"])
+        camera_dist = np.array(meta["distortion"] if meta["distortion"] else [])
 
         obj = np.array(meta['objects']).flatten().astype(np.int32)
         idxs = [i for i in range(len(obj))]
@@ -293,7 +302,7 @@ class PoseDataset(data.Dataset):
                 return end_points
             else:
                 continue
-        print("no valid obj with framae {0}".format(self.list[index]))
+        print("no valid obj with frame {0}".format(self.data_list[index]))
         return {}
 
     def __len__(self):
@@ -331,40 +340,51 @@ class PoseDataset(data.Dataset):
 
         return torch.utils.data.dataloader.default_collate(data)
 
-# class PoseDatasetAllObjects(PoseDataset):
-#     def __getitem__(self, index):
+class PoseDatasetAllObjects(PoseDataset):
+    def __getitem__(self, index):
 
-#         color_filename = '{0}/{1}-color.png'.format(self.cfg.root, self.list[index])
+        item = self.data_list[index]
+        item_abs = os.path.join(self.data_dir, item)
+        scene_name = item[:item.find("/")]
 
-#         img = Image.open(color_filename)
-#         depth = np.array(Image.open('{0}/{1}-depth.png'.format(self.cfg.root, self.list[index])))
-#         label = self.get_label(index)
-#         meta = scio.loadmat('{0}/{1}-meta.mat'.format(self.cfg.root, self.list[index]))
+        img = Image.open(item_abs + "_color.jpg")
+        depth = np.array(Image.open(item_abs + "_depth.png"))
+        label = np.array(Image.open(item_abs + "_label.png"))
+        meta_file = item_abs + "_meta.json"
+        with open(meta_file, "r") as f:
+            meta = json.load(f)
 
-#         obj = meta['cls_indexes'].flatten().astype(np.int32)
+        scene_metadata = self.scene_metadatas[scene_name]
 
-#         data_output = []
+        cam_scale = scene_metadata["cam_scale"]
 
-#         orig_img = img
-#         orig_depth = np.copy(depth)
-#         orig_label = np.copy(label)
+        camera_intr = np.array(meta["intrinsic"])
+        camera_dist = np.array(meta["distortion"])
 
-#         for idx in range(len(obj)):
-#             obj_idx = obj[idx]
-#             img = orig_img
+        obj = np.array(meta['objects']).flatten().astype(np.int32)
 
-#             end_points = self.get_item(index, idx, obj_idx, img, depth, label, meta, return_intr=True, sample_model=False)
+        data_output = []
 
-#             if end_points:
-#                 data_output.append(end_points)
-#                 img = orig_img
-#                 depth = orig_depth
-#                 label = orig_label
-#             else:
-#                 print("WARNING, FAILURE TO PROCESS OBJ {0} in FRAME {1}".format(obj_idx, color_filename))
-#                 continue
+        orig_img = img
+        orig_depth = np.copy(depth)
+        orig_label = np.copy(label)
 
-#         return data_output
+        for idx in range(len(obj)):
+            obj_idx = obj[idx]
+            img = orig_img
+
+            end_points = self.get_item(index, idx, obj_idx, img, depth, label, meta, cam_scale, camera_intr, camera_dist, return_intr=True, sample_model=False)
+
+            if end_points:
+                data_output.append(end_points)
+                img = orig_img
+                depth = orig_depth
+                label = orig_label
+            else:
+                print("WARNING, FAILURE TO PROCESS OBJ {0} in FRAME {1}".format(obj_idx, item_abs))
+                continue
+
+        return data_output
 
 
 border_list = [-1, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560, 600, 640, 680]

@@ -66,7 +66,7 @@ def main():
     estimator.cuda()
     estimator.load_state_dict(torch.load('{0}'.format(opt.model)))
 
-    workers = 1
+    workers = 3
     bs = 1
 
     optimizer = optim.Adam(estimator.parameters(), lr=cfg.lr)
@@ -84,6 +84,9 @@ def main():
     with torch.no_grad():
 
         for now, end_points in enumerate(test_dataloader):
+
+            if now % 10 != 0:
+                continue
 
             print("frame: {0}".format(now))
 

@@ -91,6 +91,7 @@ if __name__ == "__main__":
                 print("out of frames at id {0}".format(img_id))
                 break
 
+        print(img_id)
         aruco_pose = calculate_aruco_from_bgr_and_depth(color_image, depth_image, 0.001, camera_matrix, camera_dists_dict[img_id], dictionary, parameters)
 
         if aruco_pose:

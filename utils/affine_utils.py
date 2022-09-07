@@ -14,6 +14,12 @@ def average_quaternion(quats):
 
     return avg_quat
 
+def affine_matrix_from_rotmat_trans(rotmat, trans):
+    aff = np.hstack((rotmat, trans))
+    lrow = np.array([0, 0, 0, 1])
+    aff = np.vstack((aff, lrow))
+    return aff
+
 def affine_matrix_from_rotvec_trans(rot_vec, trans):
     rot = R.from_rotvec(rot_vec)
     rmatrix = rot.as_matrix()

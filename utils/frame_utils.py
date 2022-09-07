@@ -131,7 +131,9 @@ def calculate_aruco_from_bgr_and_depth(bgr, depth, depth_scale, camera_matrix, c
     corners, ids, _ = cv2.aruco.detectMarkers(bgr, aruco_dictionary, parameters=aruco_parameters)
 
     if np.all(ids is not None):  # If there are markers found by detector
-        assert(len(ids) == 1)
+        if len(ids) > 1:
+            print("Warning, multiple ARUCO's detected. Returning None.")
+            return None
         # Estimate pose of each marker and return the values rvec and tvec---different from camera coefficients
         rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners[0], 0.02, camera_matrix,
                                                                     camera_dist)

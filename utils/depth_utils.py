@@ -63,3 +63,5 @@ def filter_depths_valid_percentage(depth_valid):
     mask_out[1:][diff_bad] = False
 
     return mask_out
+
+# def filter_

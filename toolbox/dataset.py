@@ -39,11 +39,9 @@ def project_depth(depth, depth_scale, intrinsic, distortion, prune_zero=True):
 class PoseDataset(data.Dataset):
     def __init__(self, root, mode, add_noise, num_points=38400):
         
-        cameras_dir = os.path.join(root, "cameras")
         self.data_dir = os.path.join(root, "data")
         objects_dir = os.path.join(root, "objects")
 
-        self.cameras = load_cameras_dir(cameras_dir)
         self.objects = load_objects_dir(objects_dir)
         self.scene_metadatas = load_scene_metas(self.data_dir)
 
@@ -80,9 +78,8 @@ class PoseDataset(data.Dataset):
         camera = scene_metadata["camera"]
         objects = scene_metadata["objects"]
 
-        camera_data = self.cameras[camera]
-        camera_intr = camera_data["intrinsic"]
-        camera_dist = camera_data["distortion"]
+        camera_intr = np.array(meta["intrinsic"])
+        camera_dist = np.array(meta["distortion"])
 
         valid_depth_mask = depth > 0
 

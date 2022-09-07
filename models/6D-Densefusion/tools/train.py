@@ -232,12 +232,10 @@ def main():
             cfg.refine_start = True
             optimizer = optim.Adam(refiner.parameters(), lr=cfg.lr)
 
-            if cfg.dataset == 'ycb':
-                dataset = PoseDataset('train', cfg = cfg)
-            dataloader = torch.utils.data.DataLoader(dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.workers)
-            if cfg.dataset == 'ycb':
-                test_dataset = PoseDataset('test', cfg = cfg)
-            testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=cfg.batch_size, shuffle=False, num_workers=cfg.workers)
+            dataset = PoseDataset('train', cfg = cfg)
+            dataloader = torch.utils.data.DataLoader(dataset, batch_size=cfg.batch_size, collate_fn=dataset.custom_collate_fn, shuffle=True, num_workers=cfg.workers)
+            test_dataset = PoseDataset('test', cfg = cfg)
+            testdataloader = torch.utils.data.DataLoader(test_dataset, batch_size=cfg.batch_size, collate_fn=dataset.custom_collate_fn, shuffle=False, num_workers=cfg.workers)
             
             cfg.sym_list = dataset.get_sym_list()
             cfg.num_points_mesh = dataset.get_num_points_mesh()

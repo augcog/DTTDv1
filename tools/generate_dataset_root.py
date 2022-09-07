@@ -8,14 +8,12 @@ import shutil
 import numpy as np
 
 import os, sys
-
-from sklearn.model_selection import train_test_split 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 ROOT_TRAIN_DATA_LIST_FILE = "train_data_list.txt"
 ROOT_TEST_DATA_LIST_FILE = "test_data_list.txt"
-SKIP_FRAMES_NUM = 1 # Number of frames skipped between each frame selected
+SKIP_FRAMES_NUM = 0 # Number of frames skipped between each frame selected
 TRAIN_TEST_SPLIT_PERCENTAGE = 0.9
 
 def main():
@@ -26,6 +24,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='Generate data root')
     parser.add_argument('scene_list_file', type=str, help="File containing a list of scene names, one per line, to be gathered into the dataset.")
+    parser.add_argument('--synthetic_dirs', nargs='+', type=str, help="Directories containing synthetic data. Must have the word 'synthetic'")
     parser.add_argument('--scene_dir', type=str, default=os.path.join(dir_path, "..", "scenes"), help="Directory containing scenes to be gathered")
     parser.add_argument('--output', type=str, default=os.path.join(dir_path, "..", "toolbox", "root"))
     parser.add_argument('--move_cameras', action="store_true")
@@ -49,8 +48,10 @@ def main():
     for scene in scene_path_list:
         assert(os.path.isdir(scene))
 
+    assert(all(['synthetic' in s for s in args.synthetic_dirs]))
+
     random.shuffle(scene_path_list)
-    train_folder_path_list = scene_path_list[:int(len(scene_path_list) * TRAIN_TEST_SPLIT_PERCENTAGE)]
+    train_folder_path_list = scene_path_list[:int(len(scene_path_list) * TRAIN_TEST_SPLIT_PERCENTAGE)] + args.synthetic_dirs
     test_folder_path_list = scene_path_list[int(len(scene_path_list) * TRAIN_TEST_SPLIT_PERCENTAGE):]
 
     print("Number of training scenes: {0}. Number of testing scenes: {1}".format(len(train_folder_path_list), len(test_folder_path_list)))
@@ -58,16 +59,16 @@ def main():
     with open(os.path.join(args.output, ROOT_TRAIN_DATA_LIST_FILE), 'w') as f:
         for each_scene_path in train_folder_path_list:
             data_dir = os.path.join(each_scene_path, "data")
-            upper_limits = len(os.listdir(data_dir)) // 5
-            ids = [str(x).zfill(5) for x in list(range(0, upper_limits, SKIP_FRAMES_NUM))]
+            ids = [x[:x.find("_")] for x in list(os.listdir(data_dir)) if "meta.json" in x]
+            ids = ids[::SKIP_FRAMES_NUM + 1]
             file_names = [(str(os.path.basename(os.path.normpath(each_scene_path))) + "/data/" + each_id +'\n') for each_id in ids]
             f.writelines(file_names)
 
     with open(os.path.join(args.output, ROOT_TEST_DATA_LIST_FILE), "w") as f:
         for each_scene_path in test_folder_path_list:
             data_dir = os.path.join(each_scene_path, "data")
-            upper_limits = len(os.listdir(data_dir)) // 5
-            ids = [str(x).zfill(5) for x in list(range(0, upper_limits, SKIP_FRAMES_NUM))]
+            ids = [x[:x.find("_")] for x in list(os.listdir(data_dir)) if "meta.json" in x]
+            ids = ids[::SKIP_FRAMES_NUM + 1]
             file_names = [(str(os.path.basename(os.path.normpath(each_scene_path))) + "/data/" + each_id + "\n") for each_id in ids]
             f.writelines(file_names) 
 

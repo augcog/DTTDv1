@@ -70,7 +70,7 @@ class AKIPConfig(Config):
     def __init__(self):
         super().__init__()
 
-        self.root = "G:/root"
+        self.root = "E:/datasets/ours/root"
 
         self.num_objects = 12
         self.num_points = 640 * 480 // 24

@@ -1,3 +1,4 @@
+import numpy as np
 import open3d as o3d
 import pandas as pd
 import trimesh
@@ -66,3 +67,6 @@ def load_object_meshes_trimesh(object_ids):
         object_meshes[object_id] = {'name': object_name, 'mesh': obj_mesh}
 
     return object_meshes
+
+def get_objectids():
+    return np.array(object_ids_df['id'])
