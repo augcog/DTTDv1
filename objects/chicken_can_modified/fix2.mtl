@@ -9,7 +9,21 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
+<<<<<<< HEAD
 map_Kd textured_0_FXH9HeRe.jpg
 normal textured_0_norm_FXH9HeRe.jpg
 map_ao textured_0_occl_FXH9HeRe.jpg
 map_Pr textured_0_roughness_FXH9HeRe.jpg
+=======
+map_Kd F:/Area/Work/私活/私活2022/修补模型/Chicken Can V2-20221013T214549Z-001/Chicken Can V2/1/PM3D_Cube3D2_1.jpg
+
+newmtl defaultMat.003
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Kd F:/Area/Work/私活/私活2022/修补模型/Chicken Can V2-20221013T214549Z-001/Chicken Can V2/1/4.bmp
+>>>>>>> 42bb698d8bd57ee71eb2c3af15b9f5a08a5de17a
