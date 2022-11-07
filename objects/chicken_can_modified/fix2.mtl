@@ -1,0 +1,15 @@
+# Blender 3.3.1 MTL File: 'fix2.blend'
+# www.blender.org
+
+newmtl defaultMat.002
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Kd textured_0_FXH9HeRe.jpg
+normal textured_0_norm_FXH9HeRe.jpg
+map_ao textured_0_occl_FXH9HeRe.jpg
+map_Pr textured_0_roughness_FXH9HeRe.jpg
