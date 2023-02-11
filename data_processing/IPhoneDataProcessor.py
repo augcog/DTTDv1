@@ -265,7 +265,7 @@ class IPhoneDataProcessor():
             depth = depth.reshape((IPHONE_DEPTH_HEIGHT, IPHONE_DEPTH_WIDTH))
 
             # Interpolate nearest for depth -> color size
-            depth = cv2.resize(depth, (IPHONE_COLOR_WIDTH, IPHONE_COLOR_HEIGHT), cv2.INTER_NEAREST)
+            depth = cv2.resize(depth, (IPHONE_COLOR_WIDTH, IPHONE_COLOR_HEIGHT), interpolation=cv2.INTER_NEAREST)
 
             distortion_coeffs = IPhoneDataProcessor.compute_distortion_coeffs(depth, lookup_table, distortion_center, intr)
 

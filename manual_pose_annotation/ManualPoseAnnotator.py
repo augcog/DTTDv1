@@ -265,6 +265,7 @@ class ManualPoseAnnotator:
         cv2.namedWindow("current frame", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("current frame", 640, 360)
         cv2.imshow("current frame", load_bgr(frames_dir, curr_frameid, "jpg"))
+        cv2.waitKey(5000)
 
         #SETUP KEY CALLBACKS
 #------------------------------------------------------------------------------------------
