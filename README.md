@@ -2,12 +2,66 @@
 
 ## Overview
 
-This repository is the implementation code of the paper "Digital-Twin Tracking Dataset (DTTD): A Time-of-Flight 3D Object Tracking Dataset for High-Quality AR Applications".
+This repository is the implementation code of the paper "Digital Twin Tracking Dataset (DTTD): A New RGB+Depth 3D Dataset for Longer-Range Object Tracking Applications".
 
-In this work we create a novel RGB-D dataset, Digital-Twin Tracking Dataset (DTTD), to enable further research of the digital-twin tracking problem in pursuit of a Digital Twin solution. In our dataset, we select two time-of-flight (ToF) depth sensors, Microsoft Azure Kinect and Apple iPhone 12 Pro, to record 100 scenes each of 16 common purchasable objects, each frame annotated with a per-pixel semantic segmentation and ground truth object poses. We also provide source code in this repository as references to data generation and annotation pipeline in our paper. 
+In this work, we create a RGB-D dataset, called Digital-Twin Track-ing Dataset (DTTD), to enable further research of the problem to extend potential solutions to longer-range in a meter scale. We select Microsoft Azure Kinect as the state-of-the-art time-of-flight (ToF) camera. In total, 103 scenes of 10 common off-the-shelf objects with rich textures are recorded, with each frame annotated with a per-pixel semantic segmentation and ground-truth object poses provided by a commercial motion capturing system. We also provide source code in this repository as references to data generation and annotation pipeline in our paper. 
 
-Link for Dataset (To be released)
+## Dataset File Structure
+```
+DTTD_Dataset
+├── train_data_list.txt
+├── test_data_list.txt
+├── classes.txt
+├── cameras
+│   ├── az_camera1
+│   └── iphone12pro_camera1 (to be released...)
+├── data
+│   ├── az_new_night_1
+│   │   └── data
+│   │   │   ├── 00001_color.jpg
+│   │   │   ├── 00001_depth.png
+│   │   │   ├── 00001_label_debug.png
+│   │   │   ├── 00001_label.png
+│   │   │   ├── 00001_meta.json
+│   │   │   └── ...
+|   |   └── scene_meta.yaml
+│   ├── az_new_night_2
+│   │   └── data
+|   |   └── scene_meta.yaml
+|   ...
+|
+└── objects
+    ├── apple
+    │   ├── apple.mtl
+    │   ├── apple.obj
+    │   ├── front.xyz
+    │   ├── points.xyz
+    │   ├── textured_0_etZloZLC.jpg
+    │   ├── textured_0_norm_etZloZLC.jpg
+    │   ├── textured_0_occl_etZloZLC.jpg
+    │   ├── textured_0_roughness_etZloZLC.jpg
+    │   └── textured.obj.mtl
+    ├── black_expo_marker
+    ├── blue_expo_marker
+    ├── cereal_box_modified
+    ├── cheezit_box_modified
+    ├── chicken_can_modified
+    ├── clam_can_modified
+    ├── hammer_modified
+    ├── itoen_green_tea
+    ├── mac_cheese_modified
+    ├── mustard_modified
+    ├── pear
+    ├── pink_expo_marker
+    ├── pocky_pink_modified
+    ├── pocky_red_modified
+    ├── pocky_white_modified
+    ├── pop_tarts_modified
+    ├── spam_modified
+    ├── tomato_can_modified
+    └── tuna_can_modified
 
+```
 
 ## Requirements
 
@@ -44,25 +98,16 @@ pip install -r requirements.txt
 * **tools**: commands for running the pipelines. Details in **tools/README.md**.
 * **utils**: utils package
 
-## Dataset Structure
-
-Final dataset output:
- * `objects` folder
- * `scenes` folder certain data:
- 	 * `scenes/<scene name>/data/` folder
- 	 * `scenes/<scene name>/scene_meta.yaml` metadata
- * `toolbox` folder
-
 ## What you Need to Collect your own Data
  1. OptiTrack Motion Capture system with Motive tracking software
 	* This doesn't have to be running on the same computer as the other sensors. We will export the tracked poses to a CSV file.
 	* Create a rigid body to track a camera's OptiTrack markers, give the rigid body the same name that is passed into `tools/capture_data.py`
  2. Microsoft Azure Kinect
 	* We interface with the camera using Microsoft's K4A SDK: https://github.com/microsoft/Azure-Kinect-Sensor-SDK
- 3. iPhone 12 Pro / iPhone 13
+ 3. iPhone 12 Pro / iPhone 13 (to be released...)
 	* Please build the project in `iphone_app/` in XCode and install on the mobile device.
 
-## Data Collection Pipeline
+## Data Collection Pipeline (for Azure Kinect)
 ### Configuration & Setup
   1. Place ARUCO marker somewhere visible
   2. Place markers on the corners of the aruco marker, we use this to compute the (aruco -> opti) transform
@@ -73,7 +118,7 @@ Final dataset output:
       * If extrinsic scene, data collection phase should be spent observing ARUCO marker, run `tools/capture_data.py --extrinsic`
   2. Example data collection scene (not extrinsic): `python tools/capture_data.py --scene_name test az_camera1`
 
-#### Data Recording Process
+### Data Recording Process
   1. Start the OptiTrack recording
   2. Synchronization Phase
 	  1. Press `c` to begin recording data
@@ -87,11 +132,6 @@ Final dataset output:
   4. Stop OptiTrack recording
   5. Export OptiTrack recording to a CSV file with 60Hz report rate.
   6. Move tracking CSV file to `<scene name>/camera_poses/camera_pose.csv`
-		 
-### Process iPhone Data (if iPhone Data)
-  1. Convert iPhone data formats to Kinect data formats (`tools/process_iphone_data.py`)
-		* This tool converts everything to common image names, formats, and does distortion parameter fitting
-  2. Continue with step 5 or 6 depending on whether computing an extrinsic or capturing scene data
 
 ### Process Extrinsic Data to Calculate Extrinsic (If extrinsic scene)
   1. Clean raw opti poses (`tools/process_data.py --extrinsic`) 
