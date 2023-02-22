@@ -2,66 +2,12 @@
 
 ## Overview
 
-This repository is the implementation code of the paper "Digital Twin Tracking Dataset (DTTD): A New RGB+Depth 3D Dataset for Longer-Range Object Tracking Applications" ([arXiv](https://arxiv.org/abs/2302.05991)).
+This repository is the implementation code of the paper "Digital-Twin Tracking Dataset (DTTD): A Time-of-Flight 3D Object Tracking Dataset for High-Quality AR Applications".
 
-In this work, we create a RGB-D dataset, called Digital-Twin Track-ing Dataset (DTTD), to enable further research of the problem to extend potential solutions to longer-range in a meter scale. We select Microsoft Azure Kinect as the state-of-the-art time-of-flight (ToF) camera. In total, 103 scenes of 10 common off-the-shelf objects with rich textures are recorded, with each frame annotated with a per-pixel semantic segmentation and ground-truth object poses provided by a commercial motion capturing system. We also provide source code in this repository as references to data generation and annotation pipeline in our paper. 
+In this work we create a novel RGB-D dataset, Digital-Twin Tracking Dataset (DTTD), to enable further research of the digital-twin tracking problem in pursuit of a Digital Twin solution. In our dataset, we select two time-of-flight (ToF) depth sensors, Microsoft Azure Kinect and Apple iPhone 12 Pro, to record 100 scenes each of 16 common purchasable objects, each frame annotated with a per-pixel semantic segmentation and ground truth object poses. We also provide source code in this repository as references to data generation and annotation pipeline in our paper. 
 
-## Dataset File Structure
-```
-DTTD_Dataset
-├── train_data_list.txt
-├── test_data_list.txt
-├── classes.txt
-├── cameras
-│   ├── az_camera1
-│   └── iphone12pro_camera1 (to be released...)
-├── data
-│   ├── az_new_night_1
-│   │   └── data
-│   │   │   ├── 00001_color.jpg
-│   │   │   ├── 00001_depth.png
-│   │   │   ├── 00001_label_debug.png
-│   │   │   ├── 00001_label.png
-│   │   │   ├── 00001_meta.json
-│   │   │   └── ...
-|   |   └── scene_meta.yaml
-│   ├── az_new_night_2
-│   │   └── data
-|   |   └── scene_meta.yaml
-|   ...
-|
-└── objects
-    ├── apple
-    │   ├── apple.mtl
-    │   ├── apple.obj
-    │   ├── front.xyz
-    │   ├── points.xyz
-    │   ├── textured_0_etZloZLC.jpg
-    │   ├── textured_0_norm_etZloZLC.jpg
-    │   ├── textured_0_occl_etZloZLC.jpg
-    │   ├── textured_0_roughness_etZloZLC.jpg
-    │   └── textured.obj.mtl
-    ├── black_expo_marker
-    ├── blue_expo_marker
-    ├── cereal_box_modified
-    ├── cheezit_box_modified
-    ├── chicken_can_modified
-    ├── clam_can_modified
-    ├── hammer_modified
-    ├── itoen_green_tea
-    ├── mac_cheese_modified
-    ├── mustard_modified
-    ├── pear
-    ├── pink_expo_marker
-    ├── pocky_pink_modified
-    ├── pocky_red_modified
-    ├── pocky_white_modified
-    ├── pop_tarts_modified
-    ├── spam_modified
-    ├── tomato_can_modified
-    └── tuna_can_modified
+Link for Dataset (To be released)
 
-```
 
 ## Requirements
 
@@ -98,61 +44,91 @@ pip install -r requirements.txt
 * **tools**: commands for running the pipelines. Details in **tools/README.md**.
 * **utils**: utils package
 
+## Dataset Structure
+
+Final dataset output:
+ * `objects` folder
+ * `scenes` folder certain data:
+ 	 * `scenes/<scene name>/data/` folder
+ 	 * `scenes/<scene name>/scene_meta.yaml` metadata
+ * `toolbox` folder
+
 ## What you Need to Collect your own Data
  1. OptiTrack Motion Capture system with Motive tracking software
 	* This doesn't have to be running on the same computer as the other sensors. We will export the tracked poses to a CSV file.
 	* Create a rigid body to track a camera's OptiTrack markers, give the rigid body the same name that is passed into `tools/capture_data.py`
  2. Microsoft Azure Kinect
 	* We interface with the camera using Microsoft's K4A SDK: https://github.com/microsoft/Azure-Kinect-Sensor-SDK
- 3. iPhone 12 Pro / iPhone 13 (to be released...)
+ 3. iPhone 12 Pro / iPhone 13
 	* Please build the project in `iphone_app/` in XCode and install on the mobile device.
 
-## Data Collection Pipeline (for Azure Kinect)
+## Data Collection Pipeline
+
 ### Configuration & Setup
   1. Place ARUCO marker somewhere visible
-  2. Place markers on the corners of the aruco marker, we use this to compute the (aruco -> opti) transform
-  3. Place marker positions into `calculate_extrinsic/aruco_corners.yaml`, labeled under keys: `quad1`, `quad2`, `quad3`, and `quad4`.
+  2. Fix 5 markers on the body of the iPhone, create ridge body named iPhone14Pro_camera in the OptiTrack software.
 
-### Record Data (`tools/capture_data.py`)
-  1. Data collection
-      * If extrinsic scene, data collection phase should be spent observing ARUCO marker, run `tools/capture_data.py --extrinsic`
-  2. Example data collection scene (not extrinsic): `python tools/capture_data.py --scene_name test az_camera1`
+### Caculate Extrinsic Process
+#### Data Collection Step
+  1. Place markers on the corners of the aruco marker, in the order from down-left, down-right, up-right, up-left. We use this to compute the (aruco -> opti) transform.
+  2. Place marker positions into `calculate_extrinsic/aruco_corners.yaml`, labeled under keys: `quad1`, `quad2`, `quad3`, and `quad4`.
+  3. Start the OptiTrack recording.
+  4. Synchronization Phase
+    1. Press `start calibration` to begin recording data.
+    2. Observe the ARUCO marker in the scene and move the camera in different trajectories to build synchronization data.
+    3. Press `stop calibration` when finished.
+  5. Data Capturing Phase
+    1. Press `start collection` to begin recording data.
+    2. If extrinsic scene, observe the ARUCO marker while moving around the marker.
+    3. Press `stop collection` when finished.
+  6. Stop OptiTrack recording.
+  7. Export OptiTrack recording to a CSV file with 60Hz report rate.
+  8. Move tracking CSV file to `/extrinsics_scenes<scene name>/camera_poses/camera_poses.csv`.
+  9. Export the app_data to `<scene name>/iphone_data`.
+  10. Move the timestamps.csv to `<scene name>`.
 
-### Data Recording Process
-  1. Start the OptiTrack recording
-  2. Synchronization Phase
-	  1. Press `c` to begin recording data
-	  2. Observe the ARUCO marker in the scene and move the camera in different trajectories to build synchronization data
-	  3. Press `p` when finished
-  3. Data Capturing Phase
-      1. Press `d` to begin recording data
-	  2. If extrinsic scene, observe the ARUCO marker.
-	  3. If data collection scene, observe objects to track
-	  4. Press `q` when finished
-  4. Stop OptiTrack recording
-  5. Export OptiTrack recording to a CSV file with 60Hz report rate.
-  6. Move tracking CSV file to `<scene name>/camera_poses/camera_pose.csv`
-
-### Process Extrinsic Data to Calculate Extrinsic (If extrinsic scene)
-  1. Clean raw opti poses (`tools/process_data.py --extrinsic`) 
-  2. Sync opti poses with frames (`tools/process_data.py --extrinsic`)
+#### Process Data and Calcualte Extrinsic
+  1. Convert iPhone data formats to Kinect data formats (`tools/process_iphone_data.py`)
+    * This tool converts everything to common image names, formats, and does distortion parameter fitting
+    * Code: <code> python tools/process_ipone_data.py <camera_name> —scene_name <scene_name> — extrinstic </code>
+  2. Clean raw opti poses and Sync opti poses with frames (`tools/process_data.py --extrinsic`)
+    * Code: <code> python tools/process_data.py —scene_name <scene_name> — extrinstic </code>
   3. Calculate camera extrinsic (`tools/calculate_camera_extrinsic.py`)
-  4. Output will be placed in `cameras/<camera name>/extrinsic.txt`
+    * Code: <code> python tools/caculate_camera_extrinsic.py —scene_name <scene_name> </code>
+  4. Output will be placed in `cameras/<camera name>/extrinsic.txt`
 
-### Process Data (If data scene)
-  1. Clean raw opti poses (`tools/process_data.py`) <br>
-	 Example: <code>python tools/process_data.py --scene_name [SCENE_NAME]</code>
-  2. Sync opti poses with frames (`tools/process_data.py`) <br>
-	 Example: <code>python tools/process_data.py --scene_name [SCENE_NAME]</code>
-  3. Manually annotate first frame object poses (`tools/manual_annotate_poses.py`)
-	 	 1. Modify (`[SCENE_NAME]/scene_meta.yml`) by adding (`objects`) field to the file according to objects and their corresponding ids.<br>
-			Example: `python tools/manual_annotate_poses.py test`
-  4. Recover all frame object poses and verify correctness (`tools/generate_scene_labeling.py`) <br>
-	 Example: <code>python tools/generate_scene_labeling.py --fast [SCENE_NAME]</code>
-	 1. Generate semantic labeling (`tools/generate_scene_labeling.py`)<br>
-	 Example: <code>python /tools/generate_scene_labeling.py [SCENE_NAME]</code>
-	 2. Generate per frame object poses (`tools/generate_scene_labeling.py`)<br>
-	 Example: <code>python tools/generate_scene_labeling.py [SCENE_NAME]</code>
+### Scene collection Process
+#### Data Collection Step
+1. Setup LiDARDepth APP using Xcode (Need to reinstall before each scene).
+2. Start the OptiTrack recording
+3. Synchronization Phase
+    1. Press `start calibration` to begin recording data
+    2. Observe the ARUCO marker in the scene and move the camera in different trajectories to build synchronization data (swing largely from front to the back) for 20 seconds.
+    3. Press `end calibration` when finished
+4. Data Capturing Phase
+    1. cover the ARUCO marker, observe objects to track
+    2. Press `Start collecting data` to begin recording data
+    3. Press `End collecting data` when finished
+5. Stop OptiTrack recording.
+6. Export OptiTrack recording to a CSV file with 60Hz report rate.
+7. Move tracking CSV file to `<scene name>/camera_poses/camera_poses.csv`.
+8. Export the app_data to `<scene name>/iphone_data`.
+9. Move the timestamps.csv to `<scene name>`.
+
+#### Process Data
+1. Convert iPhone data formats to Kinect data formats (`tools/process_iphone_data.py`)
+    * This tool converts everything to common image names, formats, and does distortion parameter fitting
+    * Code: <code> python tools/process_ipone_data.py [CAMERA_NAME] —scene_name [SCENE_NAME] </code>
+2. Clean raw opti poses and Sync opti poses with frames (`tools/process_data.py`)
+    * Code: <code> python tools/process_data.py —scene_name [SCENE_NAME] </code>
+
+#### Anotation Process
+1. Manually annotate the first frame object poses (`tools/manual_annotate_poses.py`)
+	* Modify (`[SCENE_NAME]/scene_meta.yml`) by adding (`objects`) field to the file according to objects and their corresponding ids.<br>
+	* Code: `python tools/manual_annotate_poses.py [SCENE_NAME]`
+2. Recover all frame object poses and verify correctness (`tools/generate_scene_labeling.py`) <br>
+	* Generate semantic labeling and Generate per frame object poses (`tools/generate_scene_labeling.py`)<br>
+	* Code: <code>python /tools/generate_scene_labeling.py [SCENE_NAME]</code>
 
 ## Minutia
  * Extrinsic scenes have their color images inside of `data` stored as `png`. This is to maximize performance. Data scenes have their color images inside of `data` stored as `jpg`. This is necessary so the dataset remains usable.
@@ -167,4 +143,4 @@ pip install -r requirements.txt
  * Run `manual_annotate_poses.py` on all scenes after collection in order to archive extrinsic.
  * We want to keep the data anonymized. Avoid school logos and members of the lab appearing in frame.
  * Perform 90-180 revolution around objects, one way. Try to minimize stand-still time.
- 
+ * When doing manual annotaion, try to annote the first few frames (like 5th or 6th frame), and press 5 and 6 to move around.
