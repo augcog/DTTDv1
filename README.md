@@ -73,61 +73,63 @@ Final dataset output:
   2. Place marker positions into `calculate_extrinsic/aruco_corners.yaml`, labeled under keys: `quad1`, `quad2`, `quad3`, and `quad4`.
   3. Start the OptiTrack recording.
   4. Synchronization Phase 
-      1. Press `start calibration` to begin recording data.
+      1. Press `start calibration` on iphone to begin recording data.
       2. Observe the ARUCO marker in the scene and move the camera in different trajectories to build synchronization data (back and forth 2 to 3 times, slowly). 
       3. Press `stop calibration` when finished.
   5. Data Capturing Phase
-    1. Press `start collection` to begin recording data.
-    2. Observe the ARUCO marker while moving around the marker. (Perform 90-180 revolution around the marker, one way.)
-    3. Press `stop collection` when finished.
+      1. Press `start collection` to begin recording data.
+      2. Observe the ARUCO marker while moving around the marker. (Perform 90-180 revolution around the marker, one way.)
+      3. Press `stop collection` when finished.
   6. Stop OptiTrack recording.
   7. Export OptiTrack recording to a CSV file with 60Hz report rate.
-  8. Move tracking CSV file to `/extrinsics_scenes<scene name>/camera_poses/camera_poses.csv`.
-  9. Export the app_data to `/extrinsics_scenes<scene name>/iphone_data`.
-  10. Move the timestamps.csv to `/extrinsics_scenes<scene name>`.
+  8. Move tracking CSV file to `/extrinsics_scenes/<scene name>/camera_poses/camera_poses.csv`.
+  9. Export the app_data to `/extrinsics_scenes/<scene name>/iphone_data`.
+  10. Move the timestamps.csv to `/extrinsics_scenes/<scene name>`.
 
 #### Process Data and Calcualte Extrinsic
   1. Convert iPhone data formats to Kinect data formats (`tools/process_iphone_data.py`)
-    * This tool converts everything to common image names, formats, and does distortion parameter fitting
-    * Code: <code> python tools/process_ipone_data.py <camera_name> —scene_name <scene_name> — extrinstic </code>
+      * This tool converts everything to common image names, formats, and does distortion parameter fitting.
+      * Code: <code> python tools/process_ipone_data.py <camera_name> --depth_type <depth_type> --scene_name <scene_name> --extrinstic </code>
   2. Clean raw opti poses and Sync opti poses with frames (`tools/process_data.py --extrinsic`)
-    * Code: <code> python tools/process_data.py —scene_name <scene_name> — extrinstic </code>
+      * Code: <code> python tools/process_data.py —-scene_name <scene_name> —-extrinstic </code>
   3. Calculate camera extrinsic (`tools/calculate_camera_extrinsic.py`)
-    * Code: <code> python tools/caculate_camera_extrinsic.py —scene_name <scene_name> </code>
+      * Code: <code> python tools/caculate_camera_extrinsic.py —-scene_name <scene_name> </code>
   4. Output will be placed in `cameras/<camera name>/extrinsic.txt`
 
 ### Scene collection Process
 #### Data Collection Step
-1. Setup LiDARDepth APP using Xcode (Need to reinstall before each scene).
-2. Start the OptiTrack recording
-3. Synchronization Phase
-    1. Press `start calibration` to begin recording data
-    2. Observe the ARUCO marker in the scene and move the camera in different trajectories to build synchronization data (swing largely from front to the back) for 20 seconds.
-    3. Press `end calibration` when finished
+1. Setup LiDARDepth APP (ARKit version) using Xcode (Need to reinstall before each scene).
+2. Start the OptiTrack recording.
+3. Synchronization Phase.
+    1. Press `start calibration` to begin recording data.
+    2. Observe the ARUCO marker in the scene and move the camera in different trajectories to build synchronization data (back and forth 2 to 3 times, slowly).
+    3. Press `end calibration` when finished.
 4. Data Capturing Phase
-    1. cover the ARUCO marker, observe objects to track
-    2. Press `Start collecting data` to begin recording data
-    3. Press `End collecting data` when finished
+    1. cover the ARUCO marker.
+    2. Press `Start collection` to begin recording data.
+    3. Observe the objects while moving around. (Perform 90-180 revolution around the objects, one way.)
+    4. Press `End collection` when finished.
 5. Stop OptiTrack recording.
 6. Export OptiTrack recording to a CSV file with 60Hz report rate.
-7. Move tracking CSV file to `<scene name>/camera_poses/camera_poses.csv`.
-8. Export the app_data to `<scene name>/iphone_data`.
-9. Move the timestamps.csv to `<scene name>`.
+7. Move tracking CSV file to `scenes/<scene name>/camera_poses/camera_poses.csv`.
+8. Export the app_data to `scenes/<scene name>/iphone_data`.
+9. Move the timestamps.csv to `scenes/<scene name>`.
 
 #### Process Data
 1. Convert iPhone data formats to Kinect data formats (`tools/process_iphone_data.py`)
     * This tool converts everything to common image names, formats, and does distortion parameter fitting
-    * Code: <code> python tools/process_ipone_data.py [CAMERA_NAME] —scene_name [SCENE_NAME] </code>
+    * Code: <code> python tools/process_ipone_data.py <camera_name> --depth_type <depth_type> --scene_name <scene_name> --extrinstic </code>
 2. Clean raw opti poses and Sync opti poses with frames (`tools/process_data.py`)
     * Code: <code> python tools/process_data.py —scene_name [SCENE_NAME] </code>
 
 #### Anotation Process
-1. Manually annotate the first frame object poses (`tools/manual_annotate_poses.py`)
-	* Modify (`[SCENE_NAME]/scene_meta.yml`) by adding (`objects`) field to the file according to objects and their corresponding ids.<br>
-	* Code: `python tools/manual_annotate_poses.py [SCENE_NAME]`
+1. Manually annotate the first few frame of the object poses (`tools/manual_annotate_poses.py`).
+	  * Modify (`[SCENE_NAME]/scene_meta.yml`) by adding (`objects`) field to the file according to objects and their corresponding ids.<br>
+	  * Code: `python tools/manual_annotate_poses.py [SCENE_NAME]`
+    * Check the control instructions in the `pose_refinement/README.md`.
 2. Recover all frame object poses and verify correctness (`tools/generate_scene_labeling.py`) <br>
-	* Generate semantic labeling and Generate per frame object poses (`tools/generate_scene_labeling.py`)<br>
-	* Code: <code>python /tools/generate_scene_labeling.py [SCENE_NAME]</code>
+	  * Generate semantic labeling and adjust per frame object poses (`tools/generate_scene_labeling.py`)<br>
+	  * Code: <code>python /tools/generate_scene_labeling.py [SCENE_NAME]</code>
 
 ## Minutia
  * Extrinsic scenes have their color images inside of `data` stored as `png`. This is to maximize performance. Data scenes have their color images inside of `data` stored as `jpg`. This is necessary so the dataset remains usable.
