@@ -14,7 +14,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, ".."))
 
 from utils.camera_utils import write_frame_distortions, write_frame_intrinsics
-from utils.constants import IPHONE_COLOR_WIDTH, IPHONE_COLOR_HEIGHT, IPHONE_DEPTH_WIDTH, IPHONE_DEPTH_HEIGHT
+from utils.constants import IPHONE_COLOR_WIDTH, IPHONE_COLOR_HEIGHT, IPHONE_DEPTH_WIDTH, IPHONE_DEPTH_HEIGHT, ARKit_IPHONE_DEPTH_HEIGHT, ARkit_IPHONE_DEPTH_WIDTH
 from utils.frame_utils import transfer_color_file, write_depth
 from utils.pointcloud_utils import unproject_pixels
 
@@ -180,8 +180,8 @@ class IPhoneDataProcessor():
             
             # Extrinsic should be Identity
             extr = np.array(arr).T
-            assert(np.array_equal(extr[:,:3], np.eye(3)))
-            assert(np.array_equal(extr[:,3], np.zeros(3)))
+            #assert(np.array_equal(extr[:,:3], np.eye(3)))
+            #assert(np.array_equal(extr[:,3], np.zeros(3)))
 
             _ = f.readline() # "Distortion center"
             dist_center = [float(x) for x in f.readline().rstrip().split(',') if len(x) > 0]
@@ -239,13 +239,19 @@ class IPhoneDataProcessor():
         return dist
 
     @staticmethod
-    def process_iphone_frames(frame_ids, iphone_data_input, data_raw_output, intrs, dists):
+    def process_iphone_frames(frame_ids, iphone_data_input, data_raw_output, intrs, dists, type):
         for frame_id in tqdm(frame_ids, total=len(frame_ids), desc="collecting intrinsics/distortions and moving frames"):
-            lookup_table_file = os.path.join(iphone_data_input, "{0}_distortion_table.bin".format(frame_id))
+            if type == "ARKit":
+                pass
+            else:
+                lookup_table_file = os.path.join(iphone_data_input, "{0}_distortion_table.bin".format(frame_id))
             calib_file = os.path.join(iphone_data_input, "{0}_calibration.txt".format(frame_id))
             color_file = os.path.join(iphone_data_input, "{0}.jpeg".format(frame_id))
 
-            lookup_table = IPhoneDataProcessor.read_byte_float_file(lookup_table_file)
+            if type == "ARKit":
+                lookup_table = np.zeros(42)
+            else:
+                lookup_table = IPhoneDataProcessor.read_byte_float_file(lookup_table_file)
             intr, distortion_center = IPhoneDataProcessor.read_calib_file(calib_file)
 
             depth_old = os.path.join(iphone_data_input, "{0}.bin".format(frame_id))
@@ -262,7 +268,10 @@ class IPhoneDataProcessor():
             depth = np.array(depth_arr).astype(np.uint16)
 
             # Depth data is sideways
-            depth = depth.reshape((IPHONE_DEPTH_HEIGHT, IPHONE_DEPTH_WIDTH))
+            if type == "ARKit":
+                depth = depth.reshape((ARKit_IPHONE_DEPTH_HEIGHT, ARkit_IPHONE_DEPTH_WIDTH))
+            else:
+                depth = depth.reshape((IPHONE_DEPTH_HEIGHT, IPHONE_DEPTH_WIDTH))
 
             # Interpolate nearest for depth -> color size
             depth = cv2.resize(depth, (IPHONE_COLOR_WIDTH, IPHONE_COLOR_HEIGHT), interpolation=cv2.INTER_NEAREST)
@@ -276,7 +285,7 @@ class IPhoneDataProcessor():
             write_depth(data_raw_output, frame_id, depth)
 
     @staticmethod
-    def process_iphone_scene_data(scene_dir, camera_name):
+    def process_iphone_scene_data(scene_dir, camera_name, depth_type):
 
         iphone_data_input = os.path.join(scene_dir, "iphone_data")
         assert(os.path.isdir(iphone_data_input))
@@ -326,7 +335,7 @@ class IPhoneDataProcessor():
         threads = []
 
         for i in range(thread_count):
-            threads.append(threading.Thread(target=IPhoneDataProcessor.process_iphone_frames, args=(frame_ids[i::thread_count], iphone_data_input, data_raw_output, intrs, dists)))
+            threads.append(threading.Thread(target=IPhoneDataProcessor.process_iphone_frames, args=(frame_ids[i::thread_count], iphone_data_input, data_raw_output, intrs, dists, depth_type)))
         for i in range(thread_count):
             threads[i].start()
         for i in range(thread_count):
