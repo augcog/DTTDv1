@@ -72,10 +72,10 @@ Final dataset output:
   1. Place markers on the corners of the aruco marker, in the order from down-left, down-right, up-right, up-left. We use this to compute the (aruco -> opti) transform.
   2. Place marker positions into `calculate_extrinsic/aruco_corners.yaml`, labeled under keys: `quad1`, `quad2`, `quad3`, and `quad4`.
   3. Start the OptiTrack recording.
-  4. Synchronization Phase
-    + 1. Press `start calibration` to begin recording data.
-    + 2. Observe the ARUCO marker in the scene and move the camera in different trajectories to build synchronization data (back and forth 2 to 3 times, slowly). 
-    + 3. Press `stop calibration` when finished.
+  4. Synchronization Phase 
+    1. Press `start calibration` to begin recording data.
+    2. Observe the ARUCO marker in the scene and move the camera in different trajectories to build synchronization data (back and forth 2 to 3 times, slowly). 
+    3. Press `stop calibration` when finished.
   5. Data Capturing Phase
     1. Press `start collection` to begin recording data.
     2. Observe the ARUCO marker while moving around the marker. (Perform 90-180 revolution around the marker, one way.)
