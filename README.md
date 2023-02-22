@@ -8,7 +8,6 @@ In this work we create a novel RGB-D dataset, Digital-Twin Tracking Dataset (DTT
 
 Link for Dataset (To be released)
 
-
 ## Requirements
 
 Before running our data generation and annotation pipeline, you can activate a __conda__ environment where Python Version >= 3.7:
@@ -59,14 +58,14 @@ Final dataset output:
 	* Create a rigid body to track a camera's OptiTrack markers, give the rigid body the same name that is passed into `tools/capture_data.py`
  2. Microsoft Azure Kinect
 	* We interface with the camera using Microsoft's K4A SDK: https://github.com/microsoft/Azure-Kinect-Sensor-SDK
- 3. iPhone 12 Pro / iPhone 13
+ 3. iPhone 14 pro
 	* Please build the project in `iphone_app/` in XCode and install on the mobile device.
 
 ## Data Collection Pipeline
 
 ### Configuration & Setup
-  1. Place ARUCO marker somewhere visible
-  2. Fix 5 markers on the body of the iPhone, create ridge body named iPhone14Pro_camera in the OptiTrack software.
+  1. Place ARUCO marker somewhere visible.
+  2. Put 5 markers on the body of the iPhone, create ridge body named iPhone14Pro_camera in the OptiTrack software.
 
 ### Caculate Extrinsic Process
 #### Data Collection Step
@@ -74,18 +73,18 @@ Final dataset output:
   2. Place marker positions into `calculate_extrinsic/aruco_corners.yaml`, labeled under keys: `quad1`, `quad2`, `quad3`, and `quad4`.
   3. Start the OptiTrack recording.
   4. Synchronization Phase
-    1. Press `start calibration` to begin recording data.
-    2. Observe the ARUCO marker in the scene and move the camera in different trajectories to build synchronization data.
-    3. Press `stop calibration` when finished.
+    + 1. Press `start calibration` to begin recording data.
+    + 2. Observe the ARUCO marker in the scene and move the camera in different trajectories to build synchronization data (back and forth 2 to 3 times, slowly). 
+    + 3. Press `stop calibration` when finished.
   5. Data Capturing Phase
     1. Press `start collection` to begin recording data.
-    2. If extrinsic scene, observe the ARUCO marker while moving around the marker.
+    2. Observe the ARUCO marker while moving around the marker. (Perform 90-180 revolution around the marker, one way.)
     3. Press `stop collection` when finished.
   6. Stop OptiTrack recording.
   7. Export OptiTrack recording to a CSV file with 60Hz report rate.
   8. Move tracking CSV file to `/extrinsics_scenes<scene name>/camera_poses/camera_poses.csv`.
-  9. Export the app_data to `<scene name>/iphone_data`.
-  10. Move the timestamps.csv to `<scene name>`.
+  9. Export the app_data to `/extrinsics_scenes<scene name>/iphone_data`.
+  10. Move the timestamps.csv to `/extrinsics_scenes<scene name>`.
 
 #### Process Data and Calcualte Extrinsic
   1. Convert iPhone data formats to Kinect data formats (`tools/process_iphone_data.py`)
