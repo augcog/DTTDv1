@@ -154,6 +154,20 @@ pip install -r requirements.txt
 	 2. Generate per frame object poses (`tools/generate_scene_labeling.py`)<br>
 	 Example: <code>python tools/generate_scene_labeling.py [SCENE_NAME]</code>
 
+## Citation
+If DTTD is useful or relevant to your research, please kindly recognize our contributions by citing our paper:
+
+```
+@InProceedings{Feng_2023_CVPR,
+    author    = {Feng, Weiyu and Zhao, Seth Z. and Pan, Chuanyu and Chang, Adam and Chen, Yichen and Wang, Zekun and Yang, Allen Y.},
+    title     = {Digital Twin Tracking Dataset (DTTD): A New RGB+Depth 3D Dataset for Longer-Range Object Tracking Applications},
+    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshops},
+    month     = {June},
+    year      = {2023},
+    pages     = {3288-3297}
+}
+```
+
 ## Minutia
  * Extrinsic scenes have their color images inside of `data` stored as `png`. This is to maximize performance. Data scenes have their color images inside of `data` stored as `jpg`. This is necessary so the dataset remains usable.
  * iPhone spits out `jpg` raw color images, while Azure Kinect skips out `png` raw color images.
@@ -167,4 +181,3 @@ pip install -r requirements.txt
  * Run `manual_annotate_poses.py` on all scenes after collection in order to archive extrinsic.
  * We want to keep the data anonymized. Avoid school logos and members of the lab appearing in frame.
  * Perform 90-180 revolution around objects, one way. Try to minimize stand-still time.
- 
