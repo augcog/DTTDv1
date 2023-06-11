@@ -108,6 +108,8 @@ pip install -r requirements.txt
 	* Please build the project in `iphone_app/` in XCode and install on the mobile device.
 
 ## Data Collection Pipeline (for Azure Kinect)
+Link to tutorial video: https://youtu.be/ioKmeriW650. 
+
 ### Configuration & Setup
   1. Place ARUCO marker somewhere visible
   2. Place markers on the corners of the aruco marker, we use this to compute the (aruco -> opti) transform
