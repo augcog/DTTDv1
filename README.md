@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository is the implementation code of the paper "Digital Twin Tracking Dataset (DTTD): A New RGB+Depth 3D Dataset for Longer-Range Object Tracking Applications" ([arXiv](https://arxiv.org/abs/2302.05991)). Our work is accepted to CVPR 2023 Workshop on Vision Datasets Understanding.
+This repository is the implementation code of the paper "Digital Twin Tracking Dataset (DTTD): A New RGB+Depth 3D Dataset for Longer-Range Object Tracking Applications" ([arXiv](https://arxiv.org/abs/2302.05991), [paper](https://openaccess.thecvf.com/content/CVPR2023W/VDU/html/Feng_Digital_Twin_Tracking_Dataset_DTTD_A_New_RGBDepth_3D_Dataset_CVPRW_2023_paper.html), [video](https://youtu.be/dKplZZZChvQ). Our work is accepted to CVPR 2023 Workshop on Vision Datasets Understanding.
 
 In this work, we create a RGB-D dataset, called Digital-Twin Track-ing Dataset (DTTD), to enable further research of the problem to extend potential solutions to longer-range in a meter scale. We select Microsoft Azure Kinect as the state-of-the-art time-of-flight (ToF) camera. In total, 103 scenes of 10 common off-the-shelf objects with rich textures are recorded, with each frame annotated with a per-pixel semantic segmentation and ground-truth object poses provided by a commercial motion capturing system. We also provide source code in this repository as references to data generation and annotation pipeline in our paper. 
 
