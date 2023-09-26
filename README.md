@@ -7,6 +7,7 @@ This repository is the implementation code of the paper "Digital Twin Tracking D
 In this work, we create a RGB-D dataset, called Digital-Twin Track-ing Dataset (DTTD), to enable further research of the problem to extend potential solutions to longer-range in a meter scale. We select Microsoft Azure Kinect as the state-of-the-art time-of-flight (ToF) camera. In total, 103 scenes of 10 common off-the-shelf objects with rich textures are recorded, with each frame annotated with a per-pixel semantic segmentation and ground-truth object poses provided by a commercial motion capturing system. We also provide source code in this repository as references to data generation and annotation pipeline in our paper. 
 
 ## Recent Update
+* 09/25/2023: We introduce a continuous work of DTTD, "Towards Subcentimeter Accuracy Digital-Twin Tracking via An RGBD-based Transformer Model and A Comprehensive Mobile Dataset" ([arXiv](https://arxiv.org/abs/2309.13570)), which proposes a novel depth-robust pose estimator as well as an iPhone Dataset (DTTDv1.1). The project page will be released soon.
 * 06/28/2023: DTTDv1.0 (Azure Kinect) & DTTDv1.1 (iPhone) released at [here](https://drive.google.com/drive/folders/1U7YJKSrlWOY5h2MJRc_cwJPkQ8600jbd?usp=sharing). 
 
 ## Dataset File Structure
@@ -160,16 +161,25 @@ Link to tutorial video: https://youtu.be/ioKmeriW650.
 	 Example: <code>python tools/generate_scene_labeling.py [SCENE_NAME]</code>
 
 ## Citation
-If DTTD is useful or relevant to your research, please kindly recognize our contributions by citing our paper:
+If DTTD is useful or relevant to your research, please kindly recognize our contributions by citing our papers:
 
 ```
-@InProceedings{Feng_2023_CVPR,
+@InProceedings{DTTD,
     author    = {Feng, Weiyu and Zhao, Seth Z. and Pan, Chuanyu and Chang, Adam and Chen, Yichen and Wang, Zekun and Yang, Allen Y.},
     title     = {Digital Twin Tracking Dataset (DTTD): A New RGB+Depth 3D Dataset for Longer-Range Object Tracking Applications},
     booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshops},
     month     = {June},
     year      = {2023},
     pages     = {3288-3297}
+}
+
+@misc{DTTDMobile,
+      title={Towards Subcentimeter Accuracy Digital-Twin Tracking via An RGBD-based Transformer Model and A Comprehensive Mobile Dataset}, 
+      author={Zixun Huang and Keling Yao and Seth Z. Zhao and Chuanyu Pan and Tianjian Xu and Weiyu Feng and Allen Y. Yang},
+      year={2023},
+      eprint={2309.13570},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
 ```
 
