@@ -164,7 +164,7 @@ Link to tutorial video: https://youtu.be/ioKmeriW650.
 If DTTD is useful or relevant to your research, please kindly recognize our contributions by citing our papers:
 
 ```
-@InProceedings{DTTD,
+@InProceedings{DTTDv1,
     author    = {Feng, Weiyu and Zhao, Seth Z. and Pan, Chuanyu and Chang, Adam and Chen, Yichen and Wang, Zekun and Yang, Allen Y.},
     title     = {Digital Twin Tracking Dataset (DTTD): A New RGB+Depth 3D Dataset for Longer-Range Object Tracking Applications},
     booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshops},
@@ -173,7 +173,7 @@ If DTTD is useful or relevant to your research, please kindly recognize our cont
     pages     = {3288-3297}
 }
 
-@misc{DTTDMobile,
+@misc{DTTDv2,
       title={Towards Subcentimeter Accuracy Digital-Twin Tracking via An RGBD-based Transformer Model and A Comprehensive Mobile Dataset}, 
       author={Zixun Huang and Keling Yao and Seth Z. Zhao and Chuanyu Pan and Tianjian Xu and Weiyu Feng and Allen Y. Yang},
       year={2023},
