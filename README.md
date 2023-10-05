@@ -174,7 +174,7 @@ If DTTD is useful or relevant to your research, please kindly recognize our cont
 }
 
 @misc{DTTDv2,
-      title={Towards Subcentimeter Accuracy Digital-Twin Tracking via An RGBD-based Transformer Model and A Comprehensive Mobile Dataset}, 
+      title={Towards Robust Mobile Digital-Twin Tracking via An RGBD-based Transformer Model and A Comprehensive Mobile Dataset}, 
       author={Zixun Huang and Keling Yao and Seth Z. Zhao and Chuanyu Pan and Tianjian Xu and Weiyu Feng and Allen Y. Yang},
       year={2023},
       eprint={2309.13570},
