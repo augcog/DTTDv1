@@ -7,7 +7,7 @@ This repository is the implementation code of the paper "Digital Twin Tracking D
 In this work, we create a RGB-D dataset, called Digital-Twin Track-ing Dataset (DTTD), to enable further research of the problem to extend potential solutions to longer-range in a meter scale. We select Microsoft Azure Kinect as the state-of-the-art time-of-flight (ToF) camera. In total, 103 scenes of 10 common off-the-shelf objects with rich textures are recorded, with each frame annotated with a per-pixel semantic segmentation and ground-truth object poses provided by a commercial motion capturing system. We also provide source code in this repository as references to data generation and annotation pipeline in our paper. 
 
 ## Recent Update
-* 10/09/2023: We introduce a continuous work of DTTD, "Robust Digital-Twin Localization via An RGBD-based Transformer Network and A Comprehensive Evaluation on a Mobile Dataset" ([arXiv](https://arxiv.org/abs/2309.13570), [project page](https://github.com/augcog/Robust-Digital-Twin-Tracking)), which proposes a novel depth-robust pose estimator as well as an iPhone Dataset (DTTDv2).
+* 10/10/2023: We introduce a continuous work of DTTD, "Robust Digital-Twin Localization via An RGBD-based Transformer Network and A Comprehensive Evaluation on a Mobile Dataset" ([arXiv](https://arxiv.org/abs/2309.13570), [project page](https://github.com/augcog/Robust-Digital-Twin-Tracking)), which proposes a novel depth-robust pose estimator as well as an iPhone Dataset (DTTDv2).
 * 06/28/2023: DTTDv1 (Azure Kinect) & DTTDv2 (iPhone) released at [here](https://drive.google.com/drive/folders/1U7YJKSrlWOY5h2MJRc_cwJPkQ8600jbd?usp=sharing). 
 
 ## Dataset File Structure
@@ -174,7 +174,7 @@ If DTTD is useful or relevant to your research, please kindly recognize our cont
 }
 
 @misc{DTTDv2,
-      title={Towards Robust Mobile Digital-Twin Tracking via An RGBD-based Transformer Model and A Comprehensive Mobile Dataset}, 
+      title={Robust Digital-Twin Localization via An RGBD-based Transformer Network and A Comprehensive Evaluation on a Mobile Dataset}, 
       author={Zixun Huang and Keling Yao and Seth Z. Zhao and Chuanyu Pan and Tianjian Xu and Weiyu Feng and Allen Y. Yang},
       year={2023},
       eprint={2309.13570},
