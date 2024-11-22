@@ -1,6 +1,7 @@
 # DTTD: Digital Twin Tracking Dataset Official Repository
 
 ## Overview
+Please refer to the updated project [repo](https://github.com/augcog/DTTD2) for latest updates!
 
 This repository is the implementation code of the paper "Digital Twin Tracking Dataset (DTTD): A New RGB+Depth 3D Dataset for Longer-Range Object Tracking Applications" ([arXiv](https://arxiv.org/abs/2302.05991), [paper](https://openaccess.thecvf.com/content/CVPR2023W/VDU/html/Feng_Digital_Twin_Tracking_Dataset_DTTD_A_New_RGBDepth_3D_Dataset_CVPRW_2023_paper.html), [video](https://youtu.be/dKplZZZChvQ)). Our work is accepted to CVPR 2023 Workshop on Vision Datasets Understanding.
 
@@ -173,13 +174,14 @@ If DTTD is useful or relevant to your research, please kindly recognize our cont
     pages     = {3288-3297}
 }
 
-@misc{DTTDv2,
-      title={Robust Digital-Twin Localization via An RGBD-based Transformer Network and A Comprehensive Evaluation on a Mobile Dataset}, 
-      author={Zixun Huang and Keling Yao and Seth Z. Zhao and Chuanyu Pan and Tianjian Xu and Weiyu Feng and Allen Y. Yang},
-      year={2023},
+@misc{huang2024robust6dofposeestimation,
+      title={Robust 6DoF Pose Estimation Against Depth Noise and a Comprehensive Evaluation on a Mobile Dataset}, 
+      author={Zixun Huang and Keling Yao and Seth Z. Zhao and Chuanyu Pan and Chenfeng Xu and Kathy Zhuang and Tianjian Xu and Weiyu Feng and Allen Y. Yang},
+      year={2024},
       eprint={2309.13570},
       archivePrefix={arXiv},
-      primaryClass={cs.CV}
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2309.13570}, 
 }
 ```
 
